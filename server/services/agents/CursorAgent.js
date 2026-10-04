@@ -10,32 +10,47 @@ export class CursorAgent extends BaseAgent {
     });
   }
 
+  getOptimizationGuidelines() {
+    return `Agent: Cursor AI (Composer & Chat).
+Capabilities: IDE AI with Composer (Cmd+I) and Chat (Cmd+L) applying multi-file edits directly into the editor.
+Structure requirements:
+1. Context References: Use @filename syntax to specify context files.
+2. Surgical Diff Focus: Specify exact function, component, or line targets. Instruct Cursor to make surgical diffs and keep surrounding code, comments, and imports intact.
+3. Contracts & Signatures: Include clear type signatures (TypeScript / JSDoc) and props interfaces.
+4. Diff Constraints: Instruct Cursor to preserve working code and avoid replacing entire files when modifying a function.`;
+  }
+
   formatPrompt({
     mode,
     primaryIntent,
     rawPrompt,
+    refinedCommand,
     projectRules = [],
     structuredPlan = [],
     config = {},
   }) {
+    if (refinedCommand && typeof refinedCommand === 'string' && refinedCommand.trim().length > 0) {
+      return refinedCommand.trim();
+    }
+
     const isFix = mode === 'fix';
 
     let steps = '';
     if (structuredPlan.length > 0) {
       steps = `// Execution Steps:\n` +
         structuredPlan
-          .map((s) => `// ${s.stepNumber}. [${s.title}] (${(s.targetFiles || []).join(', ') || 'Editor'}) -> ${s.instructions}`)
+          .map((s) => `// ${s.stepNumber}. [${s.title}] (${(s.targetFiles || []).join(', ') || '@workspace'}) -> ${s.instructions}`)
           .join('\n');
     }
 
-    return `/* Cursor Rules & Prompt */
+    return `/* Cursor Rules & Execution Prompt */
 /* Objective: ${primaryIntent} */
 /* Mode: ${isFix ? 'FIX' : 'BUILD'} */
 
-/* Guardrails */
+/* Guardrails & Constraints */
 ${projectRules.map((r) => `// - ${r}`).join('\n')}
 
-${steps ? steps + '\n\n' : ''}/* User Input */
+${steps ? steps + '\n\n' : ''}/* Implementation Specification */
 ${rawPrompt}
 `;
   }

@@ -65,6 +65,7 @@ class AgentRegistry {
       name: agent.name,
       description: agent.description,
       supportedModes: agent.supportedModes,
+      optimizationGuidelines: typeof agent.getOptimizationGuidelines === 'function' ? agent.getOptimizationGuidelines() : '',
     }));
   }
 }

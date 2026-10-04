@@ -7,12 +7,14 @@
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 
-// Gemini 3 and Gemini 2.5 models in priority order based on availability
+// Gemini 2.0, 2.5, 3 and 1.5 models in priority order based on availability
 const SUPPORTED_MODELS = [
   process.env.GEMINI_MODEL,
-  'gemini-3-flash-preview',
-  'gemini-3.8-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
   'gemini-2.5-flash',
+  'gemini-3-flash-preview',
+  'gemini-1.5-pro',
 ].filter(Boolean);
 
 /**
@@ -119,22 +121,27 @@ export async function validateGeminiKey(apiKey) {
 
 /**
  * Compiles developer intent using Google's Gemini models.
- * Sends the internal instruction format `refine this command for Antigravity {command}` to Gemini.
- * The prefix is an internal instruction and is never exposed in outputs to users.
+ * Conducts deep intent reasoning, resolves missing requirements,
+ * enforces customization guardrails, and synthesizes a high-impact Refined Command
+ * specifically optimized for the target AI coding agent.
  *
  * @param {object} params
  * @param {string} [params.apiKey] - The decrypted Gemini API key or backend default
- * @param {string} params.rawPrompt - The user's input command
- * @param {string} [params.targetAgent] - Target agent ID (defaults to 'antigravity')
+ * @param {string} params.rawPrompt - The user's input prompt or error
+ * @param {string} [params.targetAgentName] - Target agent human readable name (e.g. 'Antigravity')
+ * @param {string} [params.targetAgentId] - Target agent identifier (e.g. 'antigravity')
+ * @param {string} [params.agentGuidelines] - Specific optimization guidelines for target agent
  * @param {string} [params.mode] - 'build' or 'fix'
- * @param {Array<string>} [params.rules] - Architectural rules and constraints
+ * @param {Array<string>} [params.rules] - Architectural rules, customization parameters & constraints
  * @param {object} [params.config] - Mode-specific configuration overrides
- * @returns {Promise<object>} Structured compilation data
+ * @returns {Promise<object>} Structured compilation data including reasoning & refinedCommand
  */
 export async function compileWithGemini({
   apiKey,
   rawPrompt,
-  targetAgent = 'antigravity',
+  targetAgentName = 'Antigravity',
+  targetAgentId = 'antigravity',
+  agentGuidelines = '',
   mode = 'build',
   rules = [],
   config = {},
@@ -144,26 +151,64 @@ export async function compileWithGemini({
     throw new Error('No Gemini API key configured on server or in account.');
   }
 
-  // {command} contains strictly the user's actual command
-  const command = (rawPrompt || '').trim();
+  const userCommand = (rawPrompt || '').trim();
+  const isFix = mode === 'fix';
 
-  // Internal system instruction format for Gemini:
-  // "refine this command for Antigravity {command}"
-  const internalInstruction = `refine this command for Antigravity ${command}`;
+  // Determine dynamic temperature from slider or default
+  let temperature = 0.2;
+  if (config.temperature !== undefined) {
+    const parsedTemp = parseFloat(config.temperature);
+    if (!isNaN(parsedTemp)) {
+      temperature = Math.max(0.0, Math.min(1.0, parsedTemp));
+    }
+  }
 
-  const systemInstruction = `You are an elite Software Architect and AI Intent Compiler.
-Your role is to analyze developer instructions and commands, compiling them into a deterministic, surgical execution blueprint for ${targetAgent.toUpperCase()}.
+  const systemInstruction = `You are the core intelligence engine of "Intent", an elite Prompt Improvement Tool and Autonomous Software Architect.
+Your mission is to transform raw, vague, incomplete, or poorly structured developer requests into high-quality, actionable, and agent-ready REFINED COMMANDS specifically crafted for the AI coding agent: ${targetAgentName.toUpperCase()}.
 
-Mode: ${mode.toUpperCase()} (${mode === 'fix' ? 'Diagnose issue & provide surgical patch' : 'Scaffold or refine command for execution'})
+CORE PRINCIPLES & THINKING BEHAVIOR:
+1. UNDERSTAND TRUE INTENT (NOT JUST A TEXT REWRITER):
+   - Analyze the developer's underlying goal and domain.
+   - Do NOT simply paraphrase words. Reason about what software architecture, API contracts, state models, or file modifications are actually necessary to accomplish this goal.
+2. REASON AND RESOLVE GAPS:
+   - Identify missing specifications, unstated assumptions, implicit edge cases, error handling, and test criteria that the developer omitted.
+   - Fill in those gaps using industry-standard engineering patterns while preserving the user's authentic intent.
+3. ADHERE TO CUSTOMIZATION PARAMETERS:
+   - Strictly enforce any explicit technology stack, libraries, color palette, fix strategy, or safety rules specified in the parameters.
+   - If a parameter is dynamic or unspecified (e.g. auto-detect tech stack or domain), intelligently deduce the optimal choices from the user's prompt without blindly forcing unrelated templates.
+4. ZERO GENERIC FILLER OR IRRELEVANT INSTRUCTIONS:
+   - Eliminate vague disclaimers (e.g., "Ensure code is clean", "Follow best practices", "Remember to test").
+   - Eliminate unrequested template injection (e.g., do not force React or MERN onto a Python script or CLI tool).
+5. OPTIMIZE FOR THE SELECTED CODING AGENT (${targetAgentName.toUpperCase()}):
+${agentGuidelines || 'Provide clear, deterministic, and self-contained execution directives with concrete acceptance criteria.'}
 
-Constraints and Rules:
-${rules.map((r) => `- ${r}`).join('\n')}
+6. PRODUCE A COMPLETE REFINED COMMAND:
+   - Generate a single, comprehensive, agent-ready prompt ("refinedCommand") written in clear, natural, professional English.
+   - The developer should be able to copy this refinedCommand and directly paste it into ${targetAgentName} to execute the task flawlessly on the first try.
 
+RESPONSE FORMAT:
 You MUST respond strictly in valid JSON matching this exact schema:
 {
-  "primaryIntent": "Short single sentence summarizing the core objective",
-  "detectedAmbiguities": ["Ambiguity or unstated assumption 1", "..."],
-  "detectedContradictions": ["Contradiction 1 if any, or empty list"],
+  "primaryIntent": "Short single sentence capturing the core technical objective in natural English",
+  "reasoning": {
+    "understoodGoal": "Clear explanation of what the user is trying to accomplish",
+    "missingRequirementsIdentified": [
+      "Key unstated requirement or edge case 1 that you resolved",
+      "Key unstated requirement or edge case 2 that you resolved"
+    ],
+    "architecturalDecisions": [
+      "Architectural or technical design decision 1",
+      "Architectural or technical design decision 2"
+    ],
+    "agentOptimization": "Specific explanation of how this prompt is tailored for ${targetAgentName}"
+  },
+  "detectedAmbiguities": [
+    "Ambiguity or assumption 1 resolved from the raw prompt",
+    "Ambiguity or assumption 2 resolved from the raw prompt"
+  ],
+  "detectedContradictions": [
+    "Contradiction resolved, or leave empty list if none"
+  ],
   "confidenceScore": 0.95,
   "structuredPlan": [
     {
@@ -173,15 +218,29 @@ You MUST respond strictly in valid JSON matching this exact schema:
       "instructions": "Specific, actionable implementation directive",
       "verificationCriteria": "Concrete acceptance check or command exit code"
     }
-  ]
+  ],
+  "refinedCommand": "The complete, self-contained, agent-ready refined command in clear, professional English tailored specifically for ${targetAgentName}. Must be ready to copy and execute."
 }`;
+
+  const userContextMessage = `### DEVELOPER REQUEST TO COMPILE
+Workflow Mode: ${isFix ? 'COMMAND FIX (Error Diagnosis & Surgical Patch)' : 'INITIAL BUILD (Feature Implementation / Architecture)'}
+Target Coding Agent: ${targetAgentName} (${targetAgentId})
+
+### RAW USER INPUT:
+${userCommand}
+
+### CUSTOMIZATION PARAMETERS & CONSTRAINTS:
+${rules.length > 0 ? rules.map((r) => `- ${r}`).join('\n') : '- Dynamic defaults: deduce optimal architecture and libraries from the user input.'}
+
+### INSTRUCTIONS:
+Reason deeply about the developer's complete intent, resolve any missing requirements, apply all customization parameters, and synthesize the structured plan and the final Refined Command for ${targetAgentName}.`;
 
   let lastError = null;
 
-  // Try available Gemini 3 / Gemini 2.5 models
+  // Try available Gemini models in sequence
   for (const model of SUPPORTED_MODELS) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20-second timeout
 
     try {
       const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${encodeURIComponent(cleanKey)}`;
@@ -199,12 +258,12 @@ You MUST respond strictly in valid JSON matching this exact schema:
           contents: [
             {
               role: 'user',
-              parts: [{ text: internalInstruction }],
+              parts: [{ text: userContextMessage }],
             },
           ],
           generationConfig: {
             responseMimeType: 'application/json',
-            temperature: 0.2,
+            temperature,
           },
         }),
       });
@@ -228,25 +287,39 @@ You MUST respond strictly in valid JSON matching this exact schema:
       candidateText = candidateText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
       const parsed = JSON.parse(candidateText);
 
-      // Ensure internal instruction prefix is never leaked or shown to the user in primaryIntent
       let cleanPrimaryIntent = (parsed.primaryIntent || '').trim();
-      cleanPrimaryIntent = cleanPrimaryIntent
-        .replace(/^refine this command for antigravity\s*:?\s*/i, '')
-        .replace(/refine this command for antigravity/gi, 'Refine command');
-
       if (!cleanPrimaryIntent) {
-        cleanPrimaryIntent = mode === 'fix'
-          ? 'Diagnose issue and apply surgical command fix'
-          : 'Refine and execute command for Antigravity';
+        cleanPrimaryIntent = isFix
+          ? 'Diagnose root cause and apply surgical patch'
+          : `Implement feature specification for ${targetAgentName}`;
       }
+
+      // Ensure refinedCommand is populated
+      let refinedCommand = (parsed.refinedCommand || '').trim();
+      if (!refinedCommand) {
+        // Fallback assembly if model omitted refinedCommand
+        const planText = (Array.isArray(parsed.structuredPlan) ? parsed.structuredPlan : [])
+          .map((s) => `${s.stepNumber}. **${s.title}** (${(s.targetFiles || []).join(', ') || 'Target files'}): ${s.instructions}`)
+          .join('\n');
+        refinedCommand = `## Goal: ${cleanPrimaryIntent}\n\n### Specification:\n${userCommand}\n\n### Execution Steps:\n${planText}`;
+      }
+
+      const reasoning = parsed.reasoning || {
+        understoodGoal: cleanPrimaryIntent,
+        missingRequirementsIdentified: parsed.detectedAmbiguities || [],
+        architecturalDecisions: rules || [],
+        agentOptimization: `Structured specifically for ${targetAgentName} execution model.`,
+      };
 
       return {
         modelUsed: model,
         primaryIntent: cleanPrimaryIntent,
+        reasoning,
         detectedAmbiguities: Array.isArray(parsed.detectedAmbiguities) ? parsed.detectedAmbiguities : [],
         detectedContradictions: Array.isArray(parsed.detectedContradictions) ? parsed.detectedContradictions : [],
         confidenceScore: typeof parsed.confidenceScore === 'number' ? parsed.confidenceScore : 0.95,
         structuredPlan: Array.isArray(parsed.structuredPlan) ? parsed.structuredPlan : [],
+        refinedCommand,
       };
     } catch (err) {
       clearTimeout(timeoutId);

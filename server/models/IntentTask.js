@@ -38,6 +38,12 @@ const intentTaskSchema = new mongoose.Schema(
     },
     analysis: {
       primaryIntent: { type: String },
+      reasoning: {
+        understoodGoal: { type: String },
+        missingRequirementsIdentified: [{ type: String }],
+        architecturalDecisions: [{ type: String }],
+        agentOptimization: { type: String },
+      },
       detectedAmbiguities: [{ type: String }],
       detectedContradictions: [{ type: String }],
       confidenceScore: { type: Number, default: 0.95 },

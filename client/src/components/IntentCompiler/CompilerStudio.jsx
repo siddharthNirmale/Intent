@@ -17,6 +17,10 @@ const PLATFORM_OPTIONS = [
 
 const TECH_STACK_OPTIONS = [
   {
+    group: 'Dynamic / Intelligent',
+    items: ['Auto-Detect (Infer from prompt)'],
+  },
+  {
     group: 'Full Stack Frameworks',
     items: [
       'MERN Stack (React, Express, MongoDB)',
@@ -151,11 +155,11 @@ const CURATED_LIBRARIES = [
 
 // Predefined system defaults for Initial Build
 const SYSTEM_DEFAULTS = {
-  techStack: 'MERN Stack (React, Express, MongoDB)',
+  techStack: 'Auto-Detect (Infer from prompt)',
   platform: 'antigravity',
   temperature: 0.2,
   selectedPaletteId: 'white-first',
-  selectedLibraries: ['Tailwind CSS', 'JWT'],
+  selectedLibraries: [],
 };
 
 // Command Fix Advanced Options
@@ -345,6 +349,10 @@ export const CompilerStudio = () => {
     return 'Creative';
   };
 
+  const activeAgentId = mode === 'build' ? platform : fixPlatform;
+  const activeAgentOption = platformOptions.find((p) => p.id === activeAgentId);
+  const activeAgentLabel = activeAgentOption ? activeAgentOption.label : 'Antigravity';
+
   const handleCompile = async () => {
     if (!prompt.trim()) return;
 
@@ -352,12 +360,19 @@ export const CompilerStudio = () => {
     try {
       let response;
       if (mode === 'build') {
-        const dynamicConfig = {};
-        if (overrides.techStack) dynamicConfig.techStack = techStack;
-        if (overrides.platform) dynamicConfig.platform = platform;
-        if (overrides.temperature) dynamicConfig.temperature = `${temperature} (${getTemperatureLabel(temperature)})`;
-        if (overrides.colorPalette) dynamicConfig.colorPalette = `${activePalette.name} (Background: ${activePalette.bg}, Surface: ${activePalette.surface}, Accent: ${activePalette.accent})`;
-        if (overrides.libraries) dynamicConfig.libraries = selectedLibraries;
+        const isCustomStack = overrides.techStack && techStack !== 'Auto-Detect (Infer from prompt)';
+        const dynamicConfig = {
+          techStack,
+          isTechStackCustom: isCustomStack,
+          platform,
+          temperature,
+          temperatureLabel: getTemperatureLabel(temperature),
+          isTemperatureCustom: overrides.temperature,
+          colorPalette: overrides.colorPalette ? activePalette : null,
+          isPaletteCustom: overrides.colorPalette,
+          libraries: selectedLibraries,
+          isLibrariesCustom: overrides.libraries && selectedLibraries.length > 0,
+        };
 
         response = await apiIntent.compile({
           rawPrompt: prompt,
@@ -366,12 +381,18 @@ export const CompilerStudio = () => {
           config: dynamicConfig,
         });
       } else {
-        const dynamicConfig = {};
-        if (fixOverrides.platform) dynamicConfig.platform = fixPlatform;
-        if (fixOverrides.fixStrategy) dynamicConfig.fixStrategy = fixStrategy;
-        if (fixOverrides.issueDomain) dynamicConfig.issueDomain = issueDomain;
-        if (fixOverrides.verification) dynamicConfig.verification = verification;
-        if (fixOverrides.safetyRules) dynamicConfig.safetyRules = safetyRules;
+        const isCustomDomain = fixOverrides.issueDomain && !issueDomain.toLowerCase().includes('auto-detect');
+        const dynamicConfig = {
+          platform: fixPlatform,
+          fixStrategy,
+          isStrategyCustom: fixOverrides.fixStrategy,
+          issueDomain,
+          isDomainCustom: isCustomDomain,
+          verification,
+          isVerificationCustom: fixOverrides.verification,
+          safetyRules,
+          isSafetyCustom: fixOverrides.safetyRules,
+        };
 
         response = await apiIntent.compile({
           rawPrompt: prompt,
@@ -430,7 +451,7 @@ export const CompilerStudio = () => {
 
         {/* Clean Agent Status */}
         <div className="flex items-center gap-2 text-xs text-zinc-400 select-none">
-          <span>Target: Antigravity</span>
+          <span>Target: {activeAgentLabel}</span>
           <span>•</span>
           <span>Google Gemini 3</span>
         </div>
@@ -439,8 +460,8 @@ export const CompilerStudio = () => {
       {/* Main Heading */}
       <h1 className="text-xl font-medium tracking-tight text-zinc-950">
         {mode === 'build'
-          ? 'Compile implementation blueprint for Antigravity.'
-          : 'Refine error into surgical fix directives for Antigravity.'}
+          ? `Compile implementation blueprint for ${activeAgentLabel}.`
+          : `Refine error into surgical fix directives for ${activeAgentLabel}.`}
       </h1>
 
       {/* Clean Workbench */}
@@ -455,7 +476,7 @@ export const CompilerStudio = () => {
               ? 'Enter command or feature requirements to compile...'
               : 'Paste error message, failing command, or unintended behavior...'
           }
-          agentName={mode === 'build' ? platform : fixPlatform}
+          agentName={activeAgentId}
           providerName="Gemini 3 Flash"
           submitLabel={mode === 'build' ? 'Compile Blueprint' : 'Compile Fix'}
           isLoading={loading}
@@ -472,7 +493,7 @@ export const CompilerStudio = () => {
               <span className="text-zinc-800 font-medium">
                 {aiStage === 1 && 'Understanding developer intent and context...'}
                 {aiStage === 2 && 'Structuring execution directives and constraints...'}
-                {aiStage === 3 && 'Synthesizing deterministic Antigravity blueprint...'}
+                {aiStage === 3 && `Synthesizing deterministic ${activeAgentLabel} blueprint...`}
               </span>
             </div>
             <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline-block">
@@ -676,7 +697,7 @@ export const CompilerStudio = () => {
                   Frameworks & Dependencies
                 </span>
                 {!overrides.libraries && (
-                  <span className="text-[10px] text-zinc-400">Default: Tailwind CSS, JWT</span>
+                  <span className="text-[10px] text-zinc-400">Default: Inferred from prompt</span>
                 )}
               </div>
 

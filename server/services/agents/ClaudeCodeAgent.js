@@ -21,18 +21,34 @@ export class ClaudeCodeAgent extends BaseAgent {
     return [
       'Scaffold files adhering to modular directory boundaries',
       'Implement cleanly with minimal dependencies',
-      'Validate feature end-to-end with real requests',
+      'Validate feature end-to-end with real requests and automated tests',
     ];
+  }
+
+  getOptimizationGuidelines() {
+    return `Agent: Anthropic Claude Code (CLI).
+Capabilities: Terminal-based agent executing commands, file modifications, git operations, and test runs via bash.
+Structure requirements:
+1. Directive Objective: Concise, imperative command stating the goal.
+2. Target File Paths: Exact relative paths for target files and directories.
+3. Execution Tasks: Numbered, dense, actionable steps. Avoid conversational preamble.
+4. CLI Verification: Exact bash commands to execute and assert exit code 0.
+5. Strict Guardrails: Preservation rules (e.g. do not modify package.json unless required, preserve existing APIs).`;
   }
 
   formatPrompt({
     mode,
     primaryIntent,
     rawPrompt,
+    refinedCommand,
     projectRules = [],
     structuredPlan = [],
     config = {},
   }) {
+    if (refinedCommand && typeof refinedCommand === 'string' && refinedCommand.trim().length > 0) {
+      return refinedCommand.trim();
+    }
+
     const isFix = mode === 'fix';
     const directives = this.getDirectives(mode, config);
 
@@ -42,7 +58,7 @@ export class ClaudeCodeAgent extends BaseAgent {
         structuredPlan
           .map(
             (step) =>
-              `${step.stepNumber}. **${step.title}** [${(step.targetFiles || []).join(', ') || 'N/A'}]\n   - Directives: ${step.instructions}\n   - Verification: ${step.verificationCriteria || 'Assert clean exit'}`
+              `${step.stepNumber}. **${step.title}** [${(step.targetFiles || []).join(', ') || 'N/A'}]\n   - Directives: ${step.instructions}\n   - Verification: ${step.verificationCriteria || 'Assert clean exit code 0'}`
           )
           .join('\n');
     }
