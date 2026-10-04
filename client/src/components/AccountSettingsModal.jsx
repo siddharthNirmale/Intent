@@ -58,6 +58,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
   const [showApiKey, setShowApiKey] = useState(false);
   const [hasKey, setHasKey] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState(false);
+  const [isDefaultKey, setIsDefaultKey] = useState(false);
   const [keyLoading, setKeyLoading] = useState(false);
   const [keyMessage, setKeyMessage] = useState({ text: '', type: '' });
 
@@ -78,6 +79,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
           if (res?.success) {
             setHasKey(Boolean(res.hasKey));
             setIsKeyValid(Boolean(res.isValid));
+            setIsDefaultKey(Boolean(res.isDefaultKey));
           }
         })
         .catch(() => {});
@@ -432,7 +434,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
               {hasKey && (
                 <span className="text-[11px] font-medium text-emerald-600 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {isKeyValid ? 'Active & Validated' : 'Configured'}
+                  {isKeyValid ? (isDefaultKey ? 'Default Active' : 'Active & Validated') : 'Configured'}
                 </span>
               )}
             </div>
@@ -442,7 +444,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
               <input
                 id="gemini-key"
                 type={showApiKey ? 'text' : 'password'}
-                placeholder={hasKey ? "Key configured • Enter new key to update" : "AIzaSy..."}
+                placeholder={hasKey ? (isDefaultKey ? "•••••••••••••••• (Default Server Key)" : "Key configured • Enter new key to update") : "AIzaSy..."}
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 className="w-full h-9 pl-3 pr-8 text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-100 focus:ring-1 focus:ring-zinc-400 font-mono transition-colors"
@@ -497,10 +499,10 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
                 className="flex-1 text-xs h-8"
                 isLoading={keyLoading}
               >
-                {hasKey ? 'Update & Verify' : 'Save & Verify'}
+                {hasKey ? 'Update key' : 'Save & Verify'}
               </Button>
 
-              {hasKey && (
+              {hasKey && !isDefaultKey && (
                 <Button
                   type="button"
                   variant="ghost"

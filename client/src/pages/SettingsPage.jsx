@@ -58,6 +58,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [hasKey, setHasKey] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState(false);
+  const [isDefaultKey, setIsDefaultKey] = useState(false);
   const [keyLoading, setKeyLoading] = useState(false);
   const [keyMessage, setKeyMessage] = useState({ text: '', type: '' });
 
@@ -75,6 +76,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
           if (res?.success) {
             setHasKey(Boolean(res.hasKey));
             setIsKeyValid(Boolean(res.isValid));
+            setIsDefaultKey(Boolean(res.isDefaultKey));
           }
         })
         .catch(() => {});
@@ -422,7 +424,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         Gemini API Key
                       </label>
                       <Badge variant={hasKey ? (isKeyValid ? 'success' : 'warning') : 'neutral'} className="text-[10px]">
-                        {hasKey ? (isKeyValid ? 'Active' : 'Configured') : 'Not set'}
+                        {hasKey ? (isKeyValid ? (isDefaultKey ? 'Default Active' : 'Active') : 'Configured') : 'Not set'}
                       </Badge>
                     </div>
 
@@ -431,7 +433,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         id="gemini-key"
                         ref={geminiKeyInputRef}
                         type={showApiKey ? 'text' : 'password'}
-                        placeholder={hasKey ? "••••••••••••••••" : "AIzaSy..."}
+                        placeholder={hasKey ? (isDefaultKey ? "•••••••••••••••• (Default Server Key)" : "••••••••••••••••") : "AIzaSy..."}
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
                         className="w-full h-8 pl-3 pr-8 text-xs bg-zinc-50 hover:bg-zinc-100/60 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-white focus:ring-1 focus:ring-zinc-400 border border-zinc-200/80 font-mono transition-colors"
@@ -460,9 +462,9 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         size="sm"
                         isLoading={keyLoading}
                       >
-                        Save key
+                        {hasKey ? 'Update key' : 'Save key'}
                       </Button>
-                      {hasKey && (
+                      {hasKey && !isDefaultKey && (
                         <Button
                           type="button"
                           variant="destructive"
@@ -470,7 +472,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
                           onClick={handleClearApiKey}
                           disabled={keyLoading}
                         >
-                          Remove
+                          Remove custom key
                         </Button>
                       )}
                     </div>

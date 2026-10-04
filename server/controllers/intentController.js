@@ -7,7 +7,7 @@ import { decryptApiKey } from '../services/cryptoService.js';
 // Predefined System Defaults for Initial Build Advanced Settings
 export const BUILD_DEFAULTS = {
   techStack: 'MERN Stack (React, Express, MongoDB)',
-  platform: 'claude-code',
+  platform: 'antigravity',
   temperature: '0.2 (Precise)',
   colorPalette: 'Minimal White-First',
   libraries: ['Tailwind CSS', 'JWT'],
@@ -15,7 +15,7 @@ export const BUILD_DEFAULTS = {
 
 // Predefined System Defaults for Command Fix Advanced Settings
 export const FIX_DEFAULTS = {
-  platform: 'claude-code',
+  platform: 'antigravity',
   fixStrategy: 'Surgical Patch (Minimal changes, zero refactor)',
   issueDomain: 'Auto-Detect (Infer from error text)',
   verification: 'Automated Command (Run command & check exit 0)',

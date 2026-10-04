@@ -7,8 +7,8 @@ import { apiIntent } from '../../api/client';
 import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 const PLATFORM_OPTIONS = [
-  { id: 'claude-code', label: 'Claude Code' },
   { id: 'antigravity', label: 'Antigravity' },
+  { id: 'claude-code', label: 'Claude Code' },
   { id: 'cursor', label: 'Cursor' },
   { id: 'codex', label: 'Codex' },
 ];
@@ -150,7 +150,7 @@ const CURATED_LIBRARIES = [
 // Predefined system defaults for Initial Build
 const SYSTEM_DEFAULTS = {
   techStack: 'MERN Stack (React, Express, MongoDB)',
-  platform: 'claude-code',
+  platform: 'antigravity',
   temperature: 0.2,
   selectedPaletteId: 'white-first',
   selectedLibraries: ['Tailwind CSS', 'JWT'],
@@ -189,7 +189,7 @@ const CURATED_SAFETY_RULES = [
 
 // Predefined system defaults for Command Fix
 const FIX_DEFAULTS = {
-  platform: 'claude-code',
+  platform: 'antigravity',
   fixStrategy: 'Surgical Patch (Minimal changes, zero refactor)',
   issueDomain: 'Auto-Detect (Infer from error text)',
   verification: 'Automated Command (Run command & check exit 0)',

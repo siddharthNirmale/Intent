@@ -7,11 +7,11 @@ import GenericAgent from './GenericAgent.js';
 class AgentRegistry {
   constructor() {
     this.agents = new Map();
-    this.defaultAgentId = 'claude-code';
+    this.defaultAgentId = 'antigravity';
 
-    // Register built-in agents
-    this.registerAgent(new ClaudeCodeAgent());
+    // Register built-in agents (Antigravity as primary default)
     this.registerAgent(new AntigravityAgent());
+    this.registerAgent(new ClaudeCodeAgent());
     this.registerAgent(new CursorAgent());
     this.registerAgent(new CodexAgent());
     this.registerAgent(new GenericAgent());

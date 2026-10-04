@@ -250,8 +250,11 @@ export const getApiKey = async (req, res) => {
     }
 
     const geminiConfig = user.apiKeys?.gemini;
-    const hasKey = Boolean(geminiConfig?.encryptedKey || user.apiKey);
-    const isValid = Boolean(geminiConfig?.isValid);
+    const hasUserKey = Boolean(geminiConfig?.encryptedKey || user.apiKey);
+    const hasServerKey = Boolean(process.env.GEMINI_API_KEY);
+    const hasKey = hasUserKey || hasServerKey;
+    const isValid = hasUserKey ? Boolean(geminiConfig?.isValid) : hasServerKey;
+    const isDefaultKey = !hasUserKey && hasServerKey;
     const lastValidatedAt = geminiConfig?.lastValidatedAt || null;
 
     // SECURITY: Never return raw API key in response payload
@@ -260,6 +263,7 @@ export const getApiKey = async (req, res) => {
       provider: 'gemini',
       hasKey,
       isValid,
+      isDefaultKey,
       lastValidatedAt,
     });
   } catch (error) {
