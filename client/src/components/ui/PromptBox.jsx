@@ -73,7 +73,7 @@ export const PromptBox = ({
       )}
     >
       {/* Textarea Input Workbench */}
-      <div className="p-4 pb-2">
+      <div className="relative p-4 pb-2">
         <textarea
           ref={textareaRef}
           value={value}
@@ -81,14 +81,30 @@ export const PromptBox = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
+          autoComplete="off"
+          spellCheck="false"
           className={cn(
             'w-full bg-transparent text-xs sm:text-sm text-zinc-950 placeholder:text-zinc-400',
             'outline-none resize-none font-mono leading-relaxed',
-            'thin-scrollbar'
+            'thin-scrollbar',
+            value ? 'pr-8' : ''
           )}
           style={{ minHeight: `${minRows * 20 + 20}px` }}
           autoFocus
         />
+
+        {/* Clear button inside the top-right of the input field */}
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute top-3.5 right-3.5 p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 transition-colors cursor-pointer select-none"
+            title="Clear entered content"
+            aria-label="Clear entered content"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Optional Injected Area */}
@@ -113,7 +129,7 @@ export const PromptBox = ({
           )}
         </div>
 
-        {/* Right: Shortcut Hint, Char Counter & Action Button */}
+        {/* Right: Shortcut Hint, Char Counter, Clear & Action Button */}
         <div className="flex items-center gap-2.5">
           {charCount > 0 && (
             <div className="flex items-center gap-2">
@@ -123,10 +139,12 @@ export const PromptBox = ({
               <button
                 type="button"
                 onClick={handleClear}
-                className="text-zinc-400 hover:text-zinc-700 transition-colors p-1 rounded-md hover:bg-zinc-200/50 cursor-pointer"
+                className="inline-flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-700 transition-colors px-2 py-1 rounded-md hover:bg-zinc-200/50 cursor-pointer font-medium"
                 title="Clear input"
+                aria-label="Clear input"
               >
                 <X className="w-3 h-3" />
+                <span>Clear</span>
               </button>
             </div>
           )}

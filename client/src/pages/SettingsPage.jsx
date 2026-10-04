@@ -23,6 +23,7 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  X,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -81,7 +82,12 @@ export const SettingsPage = ({ onOpenAuth }) => {
     }
   }, [isAuthenticated]);
 
+  // Automatically clear input field whenever switching section or on reload
   useEffect(() => {
+    setApiKeyInput('');
+    setAccountMessage({ text: '', type: '' });
+    setKeyMessage({ text: '', type: '' });
+
     if (hash === '#settings') {
       setActiveSection('settings');
       setTimeout(() => groqKeyInputRef.current?.focus(), 100);
@@ -93,6 +99,9 @@ export const SettingsPage = ({ onOpenAuth }) => {
 
   const handleSelectSection = (sectionId) => {
     setActiveSection(sectionId);
+    setApiKeyInput('');
+    setAccountMessage({ text: '', type: '' });
+    setKeyMessage({ text: '', type: '' });
     navigate(`/settings#${sectionId}`);
   };
 
@@ -449,18 +458,37 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         }
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
-                        className="w-full h-8 pl-3 pr-8 text-xs bg-zinc-100/70 hover:bg-zinc-100 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/60 font-mono transition-colors"
+                        className={cn(
+                          'w-full h-8 pl-3 text-xs bg-zinc-100/70 hover:bg-zinc-100 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/60 font-mono transition-colors',
+                          apiKeyInput ? 'pr-16' : 'pr-8'
+                        )}
                         autoComplete="off"
                         spellCheck="false"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 p-1 cursor-pointer transition-colors"
-                        title={showApiKey ? 'Hide key' : 'Show key'}
-                      >
-                        {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                        {apiKeyInput && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setApiKeyInput('');
+                              groqKeyInputRef.current?.focus();
+                            }}
+                            className="text-zinc-400 hover:text-zinc-700 p-1 cursor-pointer transition-colors"
+                            title="Clear input"
+                            aria-label="Clear API key input"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                          className="text-zinc-400 hover:text-zinc-700 p-1 cursor-pointer transition-colors"
+                          title={showApiKey ? 'Hide key' : 'Show key'}
+                        >
+                          {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-[11px] text-zinc-500 leading-relaxed">

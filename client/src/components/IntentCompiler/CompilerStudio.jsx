@@ -210,7 +210,7 @@ const FIX_DEFAULTS = {
 
 export const CompilerStudio = ({ onOpenAuth }) => {
   const { isAuthenticated, usage, updateUsage } = useAuth();
-  const { navigate } = useRouter();
+  const { pathname, navigate } = useRouter();
 
   const [mode, setMode] = useState('build'); // 'build' | 'fix'
   const [prompt, setPrompt] = useState('');
@@ -282,6 +282,24 @@ export const CompilerStudio = ({ onOpenAuth }) => {
       })
       .catch(() => { });
   }, []);
+
+  // Automatically clear input field whenever switching section/mode or on route change
+  useEffect(() => {
+    setPrompt('');
+    setResult(null);
+    setCompileError(null);
+  }, [mode, pathname]);
+
+  // Ensure input field is clean on reload / unload
+  useEffect(() => {
+    setPrompt('');
+    const handleBeforeUnload = () => {
+      setPrompt('');
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+
 
   const activePalette =
     COLOR_PALETTES.find((p) => p.id === selectedPaletteId) || COLOR_PALETTES[0];
@@ -455,7 +473,9 @@ export const CompilerStudio = ({ onOpenAuth }) => {
             type="button"
             onClick={() => {
               setMode('build');
+              setPrompt('');
               setResult(null);
+              setCompileError(null);
             }}
             className={cn(
               'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer outline-none',
@@ -470,7 +490,9 @@ export const CompilerStudio = ({ onOpenAuth }) => {
             type="button"
             onClick={() => {
               setMode('fix');
+              setPrompt('');
               setResult(null);
+              setCompileError(null);
             }}
             className={cn(
               'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer outline-none',
@@ -482,6 +504,24 @@ export const CompilerStudio = ({ onOpenAuth }) => {
             Command Fix
           </button>
         </div>
+
+        {/* Clear Button next to input area */}
+        {prompt && (
+          <button
+            type="button"
+            onClick={() => {
+              setPrompt('');
+              setResult(null);
+              setCompileError(null);
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer"
+            title="Clear entered content"
+            aria-label="Clear entered content"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Clear input</span>
+          </button>
+        )}
       </div>
 
       {/* Main Heading */}

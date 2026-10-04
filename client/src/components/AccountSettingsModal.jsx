@@ -219,7 +219,12 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
           <div className="flex gap-4 text-xs font-medium">
             <button
               type="button"
-              onClick={() => setActiveTab('account')}
+              onClick={() => {
+                setActiveTab('account');
+                setApiKeyInput('');
+                setAccountMessage({ text: '', type: '' });
+                setKeyMessage({ text: '', type: '' });
+              }}
               className={`transition-colors cursor-pointer select-none ${
                 activeTab === 'account'
                   ? 'text-zinc-950 font-semibold'
@@ -230,7 +235,12 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => {
+                setActiveTab('settings');
+                setApiKeyInput('');
+                setAccountMessage({ text: '', type: '' });
+                setKeyMessage({ text: '', type: '' });
+              }}
               className={`transition-colors cursor-pointer select-none ${
                 activeTab === 'settings'
                   ? 'text-zinc-950 font-semibold'
@@ -454,22 +464,35 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
                 }
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
-                className="w-full h-9 pl-3 pr-8 text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/70 font-mono transition-colors"
+                className={`w-full h-9 pl-3 ${apiKeyInput ? 'pr-16' : 'pr-8'} text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/70 font-mono transition-colors`}
                 autoComplete="off"
                 spellCheck="false"
               />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 p-1 rounded transition-colors cursor-pointer"
-                title={showApiKey ? 'Hide key' : 'Show key'}
-              >
-                {showApiKey ? (
-                  <EyeOff className="w-3.5 h-3.5" />
-                ) : (
-                  <Eye className="w-3.5 h-3.5" />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {apiKeyInput && (
+                  <button
+                    type="button"
+                    onClick={() => setApiKeyInput('')}
+                    className="text-zinc-400 hover:text-zinc-700 p-1 rounded transition-colors cursor-pointer"
+                    title="Clear input"
+                    aria-label="Clear API key input"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 )}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="text-zinc-400 hover:text-zinc-700 p-1 rounded transition-colors cursor-pointer"
+                  title={showApiKey ? 'Hide key' : 'Show key'}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  ) : (
+                    <Eye className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* 3. Security & Usage Notice */}
