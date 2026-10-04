@@ -1,18 +1,22 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
+/**
+ * Flat, minimalist Textarea component.
+ * Completely borderless, defined by smooth tonal surface and natural typography.
+ */
 export const Textarea = React.forwardRef(
-  ({ className, error, rows = 5, ...props }, ref) => {
+  ({ className, error, rows = 4, ...props }, ref) => {
     return (
       <div className="w-full">
         <textarea
           ref={ref}
           rows={rows}
           className={cn(
-            'w-full p-4 text-sm bg-zinc-50 text-zinc-950 placeholder:text-zinc-400 rounded-xl resize-y',
-            'transition-colors outline-none focus:bg-zinc-100/70 focus:ring-1 focus:ring-zinc-400',
-            'disabled:opacity-50 leading-relaxed font-mono',
-            error && 'bg-red-50 text-red-950 focus:ring-red-400',
+            'w-full p-3.5 text-xs sm:text-sm bg-zinc-100/70 hover:bg-zinc-100 focus:bg-zinc-100 text-zinc-950 placeholder:text-zinc-400 rounded-xl resize-y',
+            'transition-colors duration-150 outline-none leading-relaxed font-mono thin-scrollbar',
+            'disabled:opacity-50',
+            error && 'bg-red-50 text-red-950',
             className
           )}
           {...props}

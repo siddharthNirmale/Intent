@@ -1,11 +1,15 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
+/**
+ * Spectrum UI inspired Sidebar component.
+ * Minimalist navigation container with refined active states and clean borders.
+ */
 export const Sidebar = React.forwardRef(({ className, children, ...props }, ref) => (
   <aside
     ref={ref}
     className={cn(
-      'flex flex-col w-full md:w-64 bg-white border border-zinc-200/80 rounded-2xl p-2.5 shadow-xs shrink-0',
+      'flex flex-col w-full md:w-60 bg-zinc-50/80 rounded-2xl p-2.5 shrink-0',
       className
     )}
     {...props}
@@ -27,7 +31,7 @@ SidebarHeader.displayName = 'SidebarHeader';
 export const SidebarContent = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto', className)}
+    className={cn('flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto thin-scrollbar', className)}
     {...props}
   />
 ));
@@ -81,10 +85,11 @@ export const SidebarMenuButton = React.forwardRef(
         type="button"
         data-active={isActive}
         className={cn(
-          'flex w-full items-center justify-between rounded-lg px-3 h-8 text-left text-xs transition-all select-none outline-none cursor-pointer group',
+          'flex w-full items-center justify-between rounded-lg px-3 h-8 text-left text-xs transition-all duration-150 select-none outline-none cursor-pointer group',
+          'active:scale-[0.98]',
           isActive
-            ? 'bg-zinc-950 text-white shadow-xs font-medium'
-            : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 font-normal',
+            ? 'bg-zinc-950 text-white shadow-2xs font-medium'
+            : 'text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-950 font-normal',
           className
         )}
         {...props}
@@ -120,7 +125,7 @@ SidebarSeparator.displayName = 'SidebarSeparator';
 export const SidebarFooter = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('flex flex-col gap-2 p-2 mt-auto border-t border-zinc-100', className)}
+    className={cn('flex flex-col gap-2 p-2 mt-auto', className)}
     {...props}
   />
 ));

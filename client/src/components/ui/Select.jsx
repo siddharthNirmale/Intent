@@ -2,6 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
+/**
+ * Spectrum UI + Componentry inspired Select component.
+ * Minimalist, accessible dropdown with smooth menu entrance and grouped support.
+ */
 export const Select = ({
   value,
   onChange,
@@ -12,7 +16,7 @@ export const Select = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
-  // Close on outside click
+  // Close on outside click or Escape key
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -41,7 +45,6 @@ export const Select = ({
   const getDisplayLabel = () => {
     if (!value) return placeholder;
 
-    // Check if options has groups
     for (const opt of options) {
       if (opt.group && Array.isArray(opt.items)) {
         const found = opt.items.find((item) =>
@@ -69,12 +72,15 @@ export const Select = ({
       {/* Trigger Button */}
       <button
         type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          'w-full h-9 px-3 py-1.5 text-xs text-left bg-white text-zinc-900 rounded-lg',
-          'flex items-center justify-between gap-2 cursor-pointer',
-          'hover:bg-zinc-50/90 active:bg-zinc-100 transition-colors outline-none',
-          isOpen && 'bg-zinc-50 ring-1 ring-zinc-300',
+          'w-full h-8 px-3 text-xs text-left bg-zinc-100 hover:bg-zinc-200/70 text-zinc-950 rounded-lg',
+          'transition-all duration-150',
+          'flex items-center justify-between gap-2 cursor-pointer outline-none',
+          'focus:bg-zinc-200/90',
+          isOpen && 'bg-zinc-200/90',
           className
         )}
       >
@@ -82,20 +88,23 @@ export const Select = ({
         <ChevronDown
           className={cn(
             'w-3.5 h-3.5 text-zinc-400 shrink-0 transition-transform duration-150',
-            isOpen && 'rotate-180 text-zinc-600'
+            isOpen && 'rotate-180 text-zinc-700'
           )}
         />
       </button>
 
       {/* Menu Dropdown Popup */}
       {isOpen && (
-        <div className="absolute left-0 top-[calc(100%+4px)] w-full min-w-[200px] max-h-64 overflow-y-auto bg-white rounded-xl shadow-float p-1 pr-1.5 z-50 animate-in fade-in duration-100">
+        <div
+          role="listbox"
+          className="absolute left-0 top-[calc(100%+4px)] w-full min-w-[200px] max-h-60 overflow-y-auto bg-white rounded-xl shadow-xl p-1 z-50 animate-in fade-in zoom-in-95 duration-100 thin-scrollbar"
+        >
           {options.map((opt, optIdx) => {
             // Grouped Options
             if (opt.group && Array.isArray(opt.items)) {
               return (
                 <div key={opt.group} className="space-y-0.5 mb-1.5 last:mb-0">
-                  <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                  <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 select-none">
                     {opt.group}
                   </div>
                   {opt.items.map((item) => {
@@ -107,12 +116,14 @@ export const Select = ({
                       <button
                         key={itemVal}
                         type="button"
+                        role="option"
+                        aria-selected={isSelected}
                         onClick={() => handleSelect(itemVal)}
                         className={cn(
-                          'w-full px-2.5 py-1.5 text-xs text-left rounded-md flex items-center justify-between gap-2 transition-colors cursor-pointer',
+                          'w-full px-2.5 py-1.5 text-xs text-left rounded-md flex items-center justify-between gap-2 transition-all cursor-pointer',
                           isSelected
                             ? 'bg-zinc-100 text-zinc-950 font-medium'
-                            : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950'
+                            : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 active:bg-zinc-100'
                         )}
                       >
                         <span className="truncate">{itemLabel}</span>
@@ -133,12 +144,14 @@ export const Select = ({
               <button
                 key={itemVal || optIdx}
                 type="button"
+                role="option"
+                aria-selected={isSelected}
                 onClick={() => handleSelect(itemVal)}
                 className={cn(
-                  'w-full px-2.5 py-1.5 text-xs text-left rounded-md flex items-center justify-between gap-2 transition-colors cursor-pointer',
+                  'w-full px-2.5 py-1.5 text-xs text-left rounded-md flex items-center justify-between gap-2 transition-all cursor-pointer',
                   isSelected
                     ? 'bg-zinc-100 text-zinc-950 font-medium'
-                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950'
+                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 active:bg-zinc-100'
                 )}
               >
                 <span className="truncate">{itemLabel}</span>

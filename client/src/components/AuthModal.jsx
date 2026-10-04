@@ -67,7 +67,7 @@ export const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       />
 
       {/* Dialog Surface */}
-      <div className="relative w-full max-w-sm bg-white rounded-2xl p-6 z-10 space-y-5">
+      <div className="relative w-full max-w-sm bg-white rounded-2xl p-6 z-10 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         {/* Toggle Mode */}
         <div className="flex gap-4 text-xs font-medium">
           <button

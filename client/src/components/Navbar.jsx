@@ -71,7 +71,7 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
 
   return (
     <>
-      <header className="w-full bg-white border-b border-zinc-100">
+      <header className="w-full bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Brand */}
           <div className="flex items-center gap-3">
@@ -124,7 +124,7 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
                     aria-haspopup="true"
                   >
                     {/* User Avatar */}
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-zinc-100 ring-1 ring-zinc-950/10 flex items-center justify-center shrink-0">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center shrink-0">
                       {user?.avatar ? (
                         <img
                           src={user.avatar}
@@ -151,7 +151,7 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
                         : 'opacity-0 -translate-y-1 invisible pointer-events-none'
                     }`}
                   >
-                    <div className="w-36 bg-white rounded-xl shadow-float ring-1 ring-zinc-950/5 p-1">
+                    <div className="w-36 bg-white rounded-xl shadow-xl p-1">
                       <button
                         type="button"
                         onClick={handleAccountClick}

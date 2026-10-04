@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
-import Textarea from '../ui/Textarea';
 import Slider from '../ui/Slider';
 import Select from '../ui/Select';
+import PromptBox from '../ui/PromptBox';
+import PromptResultViewer from '../ui/PromptResultViewer';
 import { apiIntent } from '../../api/client';
 import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 const PLATFORM_OPTIONS = [
   { id: 'antigravity', label: 'Antigravity' },
@@ -204,7 +206,7 @@ export const CompilerStudio = () => {
   const [mode, setMode] = useState('build'); // 'build' | 'fix'
   const [prompt, setPrompt] = useState('');
 
-  // Initial Build Advanced Settings state initialized to predefined defaults
+  // Initial Build Advanced Settings state
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [techStack, setTechStack] = useState(SYSTEM_DEFAULTS.techStack);
   const [platform, setPlatform] = useState(SYSTEM_DEFAULTS.platform);
@@ -222,7 +224,7 @@ export const CompilerStudio = () => {
     libraries: false,
   });
 
-  // Command Fix Advanced Settings state initialized to predefined defaults
+  // Command Fix Advanced Settings state
   const [showFixAdvanced, setShowFixAdvanced] = useState(false);
   const [fixPlatform, setFixPlatform] = useState(FIX_DEFAULTS.platform);
   const [fixStrategy, setFixStrategy] = useState(FIX_DEFAULTS.fixStrategy);
@@ -240,9 +242,24 @@ export const CompilerStudio = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [aiStage, setAiStage] = useState(0);
   const [result, setResult] = useState(null);
-  const [copied, setCopied] = useState(false);
   const [platformOptions, setPlatformOptions] = useState(PLATFORM_OPTIONS);
+
+  // Progressive AI State progression without artificial glowing effects
+  useEffect(() => {
+    if (!loading) {
+      setAiStage(0);
+      return;
+    }
+    setAiStage(1);
+    const t1 = setTimeout(() => setAiStage(2), 1400);
+    const t2 = setTimeout(() => setAiStage(3), 3200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [loading]);
 
   // Dynamically synchronize supported AI agents from backend registry
   useEffect(() => {
@@ -374,78 +391,107 @@ export const CompilerStudio = () => {
     }
   };
 
-  const handleCopy = () => {
-    if (!result?.compiledAgentPrompt) return;
-    navigator.clipboard.writeText(result.compiledAgentPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
   return (
-    <div className="max-w-2xl mx-auto py-10 space-y-7">
+    <div className="max-w-2xl mx-auto py-10 space-y-6">
       {/* Workflow Mode Switch */}
-      <div className="flex items-center gap-5 text-xs">
-        <button
-          type="button"
-          onClick={() => {
-            setMode('build');
-            setResult(null);
-          }}
-          className={`transition-colors cursor-pointer ${mode === 'build'
-            ? 'text-zinc-950 font-semibold'
-            : 'text-zinc-400 hover:text-zinc-700'
-            }`}
-        >
-          Initial Build
-        </button>
-        <span className="text-zinc-200">/</span>
-        <button
-          type="button"
-          onClick={() => {
-            setMode('fix');
-            setResult(null);
-          }}
-          className={`transition-colors cursor-pointer ${mode === 'fix'
-            ? 'text-zinc-950 font-semibold'
-            : 'text-zinc-400 hover:text-zinc-700'
-            }`}
-        >
-          Command Fix
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="inline-flex items-center gap-1 p-1 bg-zinc-100 rounded-xl select-none">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('build');
+              setResult(null);
+            }}
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer outline-none',
+              mode === 'build'
+                ? 'bg-white text-zinc-950 font-semibold'
+                : 'text-zinc-500 hover:text-zinc-900'
+            )}
+          >
+            Initial Build
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('fix');
+              setResult(null);
+            }}
+            className={cn(
+              'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer outline-none',
+              mode === 'fix'
+                ? 'bg-white text-zinc-950 font-semibold'
+                : 'text-zinc-500 hover:text-zinc-900'
+            )}
+          >
+            Command Fix
+          </button>
+        </div>
+
+        {/* Clean Agent Status */}
+        <div className="flex items-center gap-2 text-xs text-zinc-400 select-none">
+          <span>Target: Antigravity</span>
+          <span>•</span>
+          <span>Google Gemini 3</span>
+        </div>
       </div>
 
-      {/* Heading */}
+      {/* Main Heading */}
       <h1 className="text-xl font-medium tracking-tight text-zinc-950">
         {mode === 'build'
-          ? 'Generate implementation prompt for a new build.'
-          : 'Generate precise fix prompt from an error or issue.'}
+          ? 'Compile implementation blueprint for Antigravity.'
+          : 'Refine error into surgical fix directives for Antigravity.'}
       </h1>
 
-      {/* Input Workbench */}
-      <div className="space-y-4">
-        <Textarea
-          rows={4}
+      {/* Clean Workbench */}
+      <div className="space-y-3">
+        <PromptBox
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          onSubmit={handleCompile}
+          onClear={() => setPrompt('')}
           placeholder={
             mode === 'build'
-              ? 'Describe what to build (requirements, feature scope, endpoints)...'
-              : 'Paste error message, failing command, or buggy behavior...'
+              ? 'Enter command or feature requirements to compile...'
+              : 'Paste error message, failing command, or unintended behavior...'
           }
-          autoFocus
+          agentName={mode === 'build' ? platform : fixPlatform}
+          providerName="Gemini 3 Flash"
+          submitLabel={mode === 'build' ? 'Compile Blueprint' : 'Compile Fix'}
+          isLoading={loading}
+          disabled={loading}
         />
 
-        {/* Action Row - Clean and Minimal by Default */}
+        {/* Natural AI Reasoning State Communication */}
+        {loading && (
+          <div className="bg-zinc-100/80 rounded-xl px-4 py-3 flex items-center justify-between text-xs animate-in fade-in duration-150">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[11px] text-zinc-400">
+                Phase {aiStage} of 3
+              </span>
+              <span className="text-zinc-800 font-medium">
+                {aiStage === 1 && 'Understanding developer intent and context...'}
+                {aiStage === 2 && 'Structuring execution directives and constraints...'}
+                {aiStage === 3 && 'Synthesizing deterministic Antigravity blueprint...'}
+              </span>
+            </div>
+            <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline-block">
+              Gemini 3
+            </span>
+          </div>
+        )}
+
+        {/* Advanced Settings Toggle & Actions */}
         <div className="flex items-center justify-between pt-1">
           {mode === 'build' ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2.5 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Advanced</span>
+                <span>Architecture Parameters</span>
                 {showAdvanced ? (
                   <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
                 ) : (
@@ -470,10 +516,10 @@ export const CompilerStudio = () => {
               <button
                 type="button"
                 onClick={() => setShowFixAdvanced(!showFixAdvanced)}
-                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2.5 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Advanced</span>
+                <span>Preservation Guardrails</span>
                 {showFixAdvanced ? (
                   <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
                 ) : (
@@ -494,24 +540,13 @@ export const CompilerStudio = () => {
               )}
             </div>
           )}
-
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleCompile}
-            isLoading={loading}
-            disabled={!prompt.trim()}
-          >
-            {mode === 'build' ? 'Generate Build Prompt' : 'Generate Fix Prompt'}
-          </Button>
         </div>
 
-        {/* ================= OPTIONAL ADVANCED SECTION ================= */}
+        {/* ================= ADVANCED SECTION (INITIAL BUILD) ================= */}
         {mode === 'build' && showAdvanced && (
-          <div className="mt-3 p-5 bg-zinc-50/80 rounded-2xl space-y-6 animate-in fade-in duration-150">
-            {/* 1. Tech Stack & Platform with shadcn Select */}
+          <div className="p-5 bg-zinc-50/80 rounded-2xl space-y-6 animate-in fade-in duration-150">
+            {/* 1. Tech Stack & Platform */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Tech Stack */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-zinc-500">
@@ -531,11 +566,10 @@ export const CompilerStudio = () => {
                 />
               </div>
 
-              {/* Target Platform */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-zinc-500">
-                    Target Platform
+                    Target Agent
                   </span>
                   {!overrides.platform && (
                     <span className="text-[10px] text-zinc-400">Default</span>
@@ -556,7 +590,7 @@ export const CompilerStudio = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-zinc-500">
-                  Temperature
+                  Precision Level
                 </span>
                 <span className="text-zinc-400 font-mono">
                   {temperature} • {getTemperatureLabel(temperature)}
@@ -574,9 +608,9 @@ export const CompilerStudio = () => {
                 }}
               />
               <div className="flex justify-between text-[10px] text-zinc-400">
-                <span>0.0 Strict</span>
+                <span>0.0 Strict & Deterministic</span>
                 <span>0.5 Balanced</span>
-                <span>1.0 Creative</span>
+                <span>1.0 Exploratory</span>
               </div>
             </div>
 
@@ -584,15 +618,14 @@ export const CompilerStudio = () => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-zinc-500">
-                  Color Palette
+                  Theme Palette
                 </span>
                 <span className="text-[11px] text-zinc-400">
-                  {overrides.colorPalette ? 'Customized: ' : 'Default: '}
+                  {overrides.colorPalette ? 'Custom: ' : 'Default: '}
                   <span className="font-medium text-zinc-700">{activePalette.name}</span>
                 </span>
               </div>
 
-              {/* Palette Cards Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {COLOR_PALETTES.map((palette) => {
                   const isSelected = selectedPaletteId === palette.id;
@@ -604,13 +637,15 @@ export const CompilerStudio = () => {
                         setSelectedPaletteId(palette.id);
                         setOverrides((prev) => ({ ...prev, colorPalette: true }));
                       }}
-                      className={`p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 cursor-pointer ${isSelected
-                        ? 'bg-white shadow-xs ring-1 ring-zinc-950/10'
-                        : 'bg-zinc-100/60 hover:bg-zinc-100'
-                        }`}
+                      className={cn(
+                        'p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 cursor-pointer',
+                        isSelected
+                          ? 'bg-white font-medium'
+                          : 'bg-zinc-100/70 hover:bg-zinc-200/60'
+                      )}
                     >
                       <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-medium text-zinc-900 truncate">
+                        <span className="text-xs text-zinc-900 truncate">
                           {palette.name}
                         </span>
                         {isSelected && (
@@ -618,7 +653,6 @@ export const CompilerStudio = () => {
                         )}
                       </div>
 
-                      {/* 4-Swatch Bar Preview */}
                       <div className="flex h-2.5 w-full rounded-md overflow-hidden">
                         {palette.colors.map((c, i) => (
                           <div
@@ -633,61 +667,19 @@ export const CompilerStudio = () => {
                   );
                 })}
               </div>
-
-              {/* Dynamic Live Preview Box */}
-              <div
-                className="p-3.5 rounded-xl transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
-                style={{
-                  backgroundColor: activePalette.surface,
-                  color: activePalette.text,
-                }}
-              >
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold">
-                      {activePalette.name}
-                    </span>
-                    <span
-                      className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                      style={{
-                        backgroundColor: activePalette.bg,
-                        color: activePalette.text,
-                      }}
-                    >
-                      Live Preview
-                    </span>
-                  </div>
-                  <p className="text-[11px] opacity-75">
-                    {activePalette.desc}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className="px-2.5 py-1 rounded-md text-xs font-medium select-none shadow-xs"
-                    style={{
-                      backgroundColor: activePalette.accent,
-                      color: activePalette.accentText,
-                    }}
-                  >
-                    Sample Action
-                  </span>
-                </div>
-              </div>
             </div>
 
-            {/* 4. Libraries (Searchable Multi-Select) */}
+            {/* 4. Libraries */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-zinc-500">
-                  Libraries & Dependencies
+                  Frameworks & Dependencies
                 </span>
                 {!overrides.libraries && (
                   <span className="text-[10px] text-zinc-400">Default: Tailwind CSS, JWT</span>
                 )}
               </div>
 
-              {/* Search Box */}
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2.5" />
                 <input
@@ -696,17 +688,16 @@ export const CompilerStudio = () => {
                   onChange={(e) => setLibSearch(e.target.value)}
                   onKeyDown={handleAddCustomLib}
                   placeholder="Search libraries or type name + Enter..."
-                  className="w-full text-xs bg-white text-zinc-900 placeholder:text-zinc-400 pl-8 pr-3 py-2 rounded-lg outline-none"
+                  className="w-full text-xs bg-white text-zinc-900 placeholder:text-zinc-400 pl-8 pr-3 py-2 rounded-lg outline-none focus:bg-zinc-100/80 transition-colors"
                 />
               </div>
 
-              {/* Selected Active Chips */}
               {selectedLibraries.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {selectedLibraries.map((lib) => (
                     <span
                       key={lib}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-900 text-white rounded text-[11px]"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-900 text-white rounded-md text-[11px] font-medium"
                     >
                       <span>{lib}</span>
                       <button
@@ -721,7 +712,6 @@ export const CompilerStudio = () => {
                 </div>
               )}
 
-              {/* Suggestions */}
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {CURATED_LIBRARIES.filter((lib) =>
                   lib.toLowerCase().includes(libSearch.toLowerCase())
@@ -733,7 +723,7 @@ export const CompilerStudio = () => {
                       key={lib}
                       type="button"
                       onClick={() => toggleLibrary(lib)}
-                      className="px-2 py-0.5 rounded text-[11px] bg-white text-zinc-600 hover:text-zinc-950 transition-colors cursor-pointer"
+                      className="px-2 py-0.5 rounded-md text-[11px] bg-zinc-100 hover:bg-zinc-200/70 text-zinc-700 transition-colors cursor-pointer"
                     >
                       + {lib}
                     </button>
@@ -744,16 +734,15 @@ export const CompilerStudio = () => {
           </div>
         )}
 
-        {/* ================= OPTIONAL COMMAND FIX ADVANCED SECTION ================= */}
+        {/* ================= ADVANCED SECTION (COMMAND FIX) ================= */}
         {mode === 'fix' && showFixAdvanced && (
-          <div className="mt-3 p-5 bg-zinc-50/80 rounded-2xl space-y-5 animate-in fade-in duration-150">
-            {/* 1. Target Platform & Fix Strategy */}
+          <div className="p-5 bg-zinc-50/80 rounded-2xl space-y-5 animate-in fade-in duration-150">
+            {/* 1. Target Agent & Fix Strategy */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Target Platform */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-zinc-500">
-                    Target Platform
+                    Target Agent
                   </span>
                   {!fixOverrides.platform && (
                     <span className="text-[10px] text-zinc-400">Default</span>
@@ -769,7 +758,6 @@ export const CompilerStudio = () => {
                 />
               </div>
 
-              {/* Fix Strategy */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-zinc-500">
@@ -792,7 +780,6 @@ export const CompilerStudio = () => {
 
             {/* 2. Issue Domain & Verification Method */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Issue Domain */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-zinc-500">
@@ -812,7 +799,6 @@ export const CompilerStudio = () => {
                 />
               </div>
 
-              {/* Verification Method */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-zinc-500">
@@ -856,10 +842,12 @@ export const CompilerStudio = () => {
                       key={rule}
                       type="button"
                       onClick={() => toggleSafetyRule(rule)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${isActive
-                        ? 'bg-zinc-900 text-white font-medium shadow-xs'
-                        : 'bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
-                        }`}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer',
+                        isActive
+                          ? 'bg-zinc-900 text-white font-medium'
+                          : 'bg-zinc-100 hover:bg-zinc-200/70 text-zinc-700'
+                      )}
                     >
                       {isActive && <Check className="w-3 h-3 text-white" />}
                       <span>{rule}</span>
@@ -872,39 +860,9 @@ export const CompilerStudio = () => {
         )}
       </div>
 
-      {/* Compiled Output */}
+      {/* Output Viewer */}
       {result && (
-        <div className="pt-6 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-zinc-900">
-                {result.primaryIntent}
-              </span>
-              {result.compilationSource === 'gemini-ai' ? (
-                <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-emerald-600/20">
-                  Gemini AI
-                </span>
-              ) : (
-                <span className="text-[10px] font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">
-                  Compiled Rule Engine
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="text-xs text-zinc-500 hover:text-zinc-950 transition-colors cursor-pointer"
-            >
-              {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-
-          <div className="bg-zinc-50 p-4 rounded-xl">
-            <pre className="font-mono text-xs text-zinc-800 whitespace-pre-wrap break-words leading-relaxed max-h-[520px] overflow-y-auto pr-2">
-              {result.compiledAgentPrompt}
-            </pre>
-          </div>
-        </div>
+        <PromptResultViewer result={result} />
       )}
     </div>
   );

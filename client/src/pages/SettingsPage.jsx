@@ -271,9 +271,6 @@ export const SettingsPage = ({ onOpenAuth }) => {
                     <Sliders className="w-4 h-4" />
                     <span>Settings</span>
                   </div>
-                  {hasKey && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -344,7 +341,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
                               onClick={() => setAvatar(url)}
                               className={cn(
                                 'w-7 h-7 rounded-full overflow-hidden transition-all cursor-pointer outline-none',
-                                isSelected ? 'ring-2 ring-zinc-950 scale-105' : 'opacity-60 hover:opacity-100'
+                                isSelected ? 'scale-110 opacity-100 shadow-sm' : 'opacity-60 hover:opacity-100'
                               )}
                             >
                               <img src={url} alt="" className="w-full h-full object-cover" />
@@ -370,7 +367,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         onChange={(e) => setName(e.target.value)}
                         maxLength={50}
                         required
-                        className="h-8 text-xs bg-zinc-50 border border-zinc-200/80 focus:bg-white"
+                        className="h-8 text-xs bg-zinc-100/70 focus:bg-zinc-200/60"
                       />
                     </div>
 
@@ -436,7 +433,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         placeholder={hasKey ? (isDefaultKey ? "•••••••••••••••• (Default Server Key)" : "••••••••••••••••") : "AIzaSy..."}
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
-                        className="w-full h-8 pl-3 pr-8 text-xs bg-zinc-50 hover:bg-zinc-100/60 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-white focus:ring-1 focus:ring-zinc-400 border border-zinc-200/80 font-mono transition-colors"
+                        className="w-full h-8 pl-3 pr-8 text-xs bg-zinc-100/70 hover:bg-zinc-100 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/60 font-mono transition-colors"
                         autoComplete="off"
                         spellCheck="false"
                       />

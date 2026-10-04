@@ -1,11 +1,15 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
+/**
+ * Minimalist, flat Card component.
+ * Zero borders, flat tonal background, clean typography.
+ */
 export const Card = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      'rounded-2xl border border-zinc-200/80 bg-white text-zinc-950 shadow-xs',
+      'rounded-2xl bg-zinc-50/80 text-zinc-950',
       className
     )}
     {...props}
@@ -16,7 +20,7 @@ Card.displayName = 'Card';
 export const CardHeader = React.forwardRef(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('flex flex-col space-y-1.5 p-6', className)}
+    className={cn('flex flex-col space-y-1 p-6 pb-4', className)}
     {...props}
   />
 ));
@@ -25,7 +29,7 @@ CardHeader.displayName = 'CardHeader';
 export const CardTitle = React.forwardRef(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn('text-sm font-semibold leading-none tracking-tight text-zinc-950', className)}
+    className={cn('text-sm font-semibold leading-tight tracking-tight text-zinc-950', className)}
     {...props}
   />
 ));
@@ -34,7 +38,7 @@ CardTitle.displayName = 'CardTitle';
 export const CardDescription = React.forwardRef(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn('text-xs text-zinc-500', className)}
+    className={cn('text-xs text-zinc-500 leading-normal', className)}
     {...props}
   />
 ));
@@ -55,3 +59,4 @@ export const CardFooter = React.forwardRef(({ className, ...props }, ref) => (
 CardFooter.displayName = 'CardFooter';
 
 export default Card;
+

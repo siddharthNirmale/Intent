@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 @layer base {
-  * {
-    border-color: transparent;
+  *, ::before, ::after {
+    border-color: transparent !important;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
   }

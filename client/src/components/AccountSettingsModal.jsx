@@ -213,9 +213,9 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
       />
 
       {/* Modal Surface */}
-      <div className="relative w-full max-w-md bg-white rounded-2xl p-6 z-10 space-y-5 shadow-float ring-1 ring-zinc-950/5">
+      <div className="relative w-full max-w-md bg-white rounded-2xl p-6 z-10 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         {/* Header Tabs & Close */}
-        <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+        <div className="flex items-center justify-between pb-3">
           <div className="flex gap-4 text-xs font-medium">
             <button
               type="button"
@@ -262,7 +262,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
 
               <div className="flex items-center gap-4">
                 {/* Active Avatar Preview */}
-                <div className="relative w-14 h-14 rounded-full overflow-hidden bg-zinc-100 ring-1 ring-zinc-950/10 flex items-center justify-center shrink-0">
+                <div className="relative w-14 h-14 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center shrink-0">
                   {avatar ? (
                     <img
                       src={avatar}
@@ -333,8 +333,8 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
                         }}
                         className={`w-7 h-7 rounded-full overflow-hidden transition-all cursor-pointer ${
                           isSelected
-                            ? 'ring-2 ring-zinc-950 scale-105'
-                            : 'opacity-70 hover:opacity-100 hover:scale-105'
+                            ? 'scale-110 opacity-100 shadow-sm'
+                            : 'opacity-60 hover:opacity-100'
                         }`}
                         title={preset.label}
                       >
@@ -432,8 +432,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
                 Gemini API Key
               </label>
               {hasKey && (
-                <span className="text-[11px] font-medium text-emerald-600 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[11px] font-medium text-emerald-700">
                   {isKeyValid ? (isDefaultKey ? 'Default Active' : 'Active & Validated') : 'Configured'}
                 </span>
               )}
@@ -447,7 +446,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
                 placeholder={hasKey ? (isDefaultKey ? "•••••••••••••••• (Default Server Key)" : "Key configured • Enter new key to update") : "AIzaSy..."}
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
-                className="w-full h-9 pl-3 pr-8 text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-100 focus:ring-1 focus:ring-zinc-400 font-mono transition-colors"
+                className="w-full h-9 pl-3 pr-8 text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/70 font-mono transition-colors"
                 autoComplete="off"
                 spellCheck="false"
               />
