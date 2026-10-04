@@ -174,9 +174,22 @@ export const compileIntent = async (req, res) => {
       });
     }
 
+    // Naturally determine project type from tech stack
+    let inferredBuildType = config?.buildType;
+    if (!inferredBuildType && config?.techStack) {
+      const stackLower = config.techStack.toLowerCase();
+      if (stackLower.includes('frontend') || stackLower.includes('react + vite') || stackLower.includes('vue') || stackLower.includes('svelte') || stackLower.includes('astro')) {
+        inferredBuildType = 'Frontend';
+      } else if (stackLower.includes('backend') || stackLower.includes('api') || stackLower.includes('fastapi') || stackLower.includes('nestjs') || stackLower.includes('fiber') || stackLower.includes('hono')) {
+        inferredBuildType = 'Backend';
+      } else {
+        inferredBuildType = 'Full Stack';
+      }
+    }
+
     const effectiveRules = [
       ...(Array.isArray(rules) ? rules : []),
-      ...(config?.buildType ? [`Build Type: ${config.buildType}`] : []),
+      ...(inferredBuildType ? [`Project Scope: ${inferredBuildType}`] : []),
       ...(config?.techStack ? [`Tech Stack: ${config.techStack}`] : []),
       ...(config?.temperature ? [`Temperature: ${config.temperature}`] : []),
       ...(config?.colorPalette ? [`Design Palette: ${config.colorPalette}`] : []),

@@ -3,9 +3,7 @@ import Button from '../ui/Button';
 import Textarea from '../ui/Textarea';
 import Slider from '../ui/Slider';
 import { apiIntent } from '../../api/client';
-import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal } from 'lucide-react';
-
-const BUILD_TYPES = ['Full Stack', 'Frontend', 'Backend'];
+import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal, Palette } from 'lucide-react';
 
 const PLATFORMS = [
   { id: 'claude-code', name: 'Claude Code' },
@@ -14,21 +12,123 @@ const PLATFORMS = [
   { id: 'codex', name: 'Codex' },
 ];
 
-const TECH_STACKS = [
-  'MERN (React + Express + MongoDB)',
-  'React + Vite + Tailwind',
-  'Next.js (App Router)',
-  'Node.js + Express REST API',
-  'Python + FastAPI',
-  'Custom',
+const TECH_STACK_CATEGORIES = [
+  {
+    group: 'Full Stack Frameworks',
+    stacks: [
+      'MERN Stack (React, Express, MongoDB)',
+      'Next.js 15 (App Router, RSC, Tailwind)',
+      'T3 Stack (Next.js, tRPC, Prisma, Tailwind)',
+      'Next.js + Supabase + Tailwind',
+      'Remix + PostgreSQL + Prisma',
+      'Nuxt 3 + Vue + Nitro + Supabase',
+      'SvelteKit + Supabase + Tailwind',
+    ],
+  },
+  {
+    group: 'Frontend Focused',
+    stacks: [
+      'React + Vite + Tailwind CSS',
+      'Vue 3 + Vite + Pinia + Tailwind',
+      'SvelteKit + Tailwind CSS (Frontend)',
+      'Astro + Tailwind CSS (Content & Web)',
+    ],
+  },
+  {
+    group: 'Backend, APIs & Runtimes',
+    stacks: [
+      'Node.js + Express.js + Mongoose',
+      'Python + FastAPI + SQLAlchemy',
+      'NestJS + TypeScript + PostgreSQL',
+      'Go + Gin / Fiber + PostgreSQL',
+      'Bun + Elysia.js + Drizzle ORM',
+      'Hono + Cloudflare Workers (Edge API)',
+    ],
+  },
+  {
+    group: 'Custom',
+    stacks: ['Custom Architecture'],
+  },
 ];
 
 const COLOR_PALETTES = [
-  { name: 'Minimal White-First', dot: 'bg-white border border-zinc-200' },
-  { name: 'Monochrome Slate', dot: 'bg-slate-300' },
-  { name: 'Zinc Neutral', dot: 'bg-zinc-400' },
-  { name: 'Onyx Dark', dot: 'bg-zinc-900' },
-  { name: 'Warm Sand', dot: 'bg-amber-200' },
+  {
+    id: 'white-first',
+    name: 'Minimal White-First',
+    desc: 'Clean white background, subtle canvas, crisp neutral text',
+    colors: ['#ffffff', '#f8fafc', '#09090b', '#18181b'],
+    bg: '#ffffff',
+    surface: '#f8fafc',
+    text: '#09090b',
+    accent: '#18181b',
+    accentText: '#ffffff',
+  },
+  {
+    id: 'monochrome',
+    name: 'Vercel Monochrome',
+    desc: 'Stark white, high-contrast zinc, solid pitch black',
+    colors: ['#ffffff', '#f4f4f5', '#000000', '#52525b'],
+    bg: '#ffffff',
+    surface: '#f4f4f5',
+    text: '#000000',
+    accent: '#000000',
+    accentText: '#ffffff',
+  },
+  {
+    id: 'nordic',
+    name: 'Nordic Frost',
+    desc: 'Polar white canvas with cool arctic blue highlights',
+    colors: ['#f8fafc', '#f1f5f9', '#0f172a', '#0284c7'],
+    bg: '#f8fafc',
+    surface: '#f1f5f9',
+    text: '#0f172a',
+    accent: '#0284c7',
+    accentText: '#ffffff',
+  },
+  {
+    id: 'linear-violet',
+    name: 'Linear Violet',
+    desc: 'Pure soft canvas with electric violet accents',
+    colors: ['#faf5ff', '#f3e8ff', '#1e1b4b', '#7c3aed'],
+    bg: '#faf5ff',
+    surface: '#f3e8ff',
+    text: '#1e1b4b',
+    accent: '#7c3aed',
+    accentText: '#ffffff',
+  },
+  {
+    id: 'emerald',
+    name: 'Emerald Terminal',
+    desc: 'Developer green tints on clean white surfaces',
+    colors: ['#ffffff', '#f0fdf4', '#064e3b', '#059669'],
+    bg: '#ffffff',
+    surface: '#f0fdf4',
+    text: '#064e3b',
+    accent: '#059669',
+    accentText: '#ffffff',
+  },
+  {
+    id: 'warm-editorial',
+    name: 'Warm Editorial',
+    desc: 'Warm cream paper, linen surface, terracotta amber',
+    colors: ['#faf8f5', '#f4efe6', '#292524', '#d97706'],
+    bg: '#faf8f5',
+    surface: '#f4efe6',
+    text: '#292524',
+    accent: '#d97706',
+    accentText: '#ffffff',
+  },
+  {
+    id: 'onyx-dark',
+    name: 'Onyx Studio (Dark)',
+    desc: 'Deep graphite dark mode with electric cyan accent',
+    colors: ['#09090b', '#18181b', '#f4f4f5', '#06b6d4'],
+    bg: '#09090b',
+    surface: '#18181b',
+    text: '#f4f4f5',
+    accent: '#06b6d4',
+    accentText: '#09090b',
+  },
 ];
 
 const CURATED_LIBRARIES = [
@@ -41,21 +141,21 @@ const CURATED_LIBRARIES = [
   'Axios',
   'Bcrypt',
   'Prisma',
-  'Express',
   'TanStack Query',
+  'Drizzle ORM',
+  'NextAuth / Auth.js',
 ];
 
 export const CompilerStudio = () => {
   const [mode, setMode] = useState('build'); // 'build' | 'fix'
   const [prompt, setPrompt] = useState('');
 
-  // All Configuration Options (Inside Advanced Section for Initial Build)
+  // Configuration (inside Advanced section for Initial Build)
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [buildType, setBuildType] = useState('Full Stack');
-  const [techStack, setTechStack] = useState('MERN (React + Express + MongoDB)');
+  const [techStack, setTechStack] = useState('MERN Stack (React, Express, MongoDB)');
   const [platform, setPlatform] = useState('claude-code');
   const [temperature, setTemperature] = useState(0.2);
-  const [colorPalette, setColorPalette] = useState('Minimal White-First');
+  const [selectedPaletteId, setSelectedPaletteId] = useState('white-first');
   const [selectedLibraries, setSelectedLibraries] = useState([
     'Tailwind CSS',
     'JWT',
@@ -65,6 +165,9 @@ export const CompilerStudio = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
+
+  const activePalette =
+    COLOR_PALETTES.find((p) => p.id === selectedPaletteId) || COLOR_PALETTES[0];
 
   const toggleLibrary = (lib) => {
     if (selectedLibraries.includes(lib)) {
@@ -101,14 +204,16 @@ export const CompilerStudio = () => {
         rawPrompt: prompt,
         targetAgent: platform,
         mode,
-        config: mode === 'build' ? {
-          buildType,
-          techStack,
-          platform,
-          temperature: `${temperature} (${getTemperatureLabel(temperature)})`,
-          colorPalette,
-          libraries: selectedLibraries,
-        } : undefined,
+        config:
+          mode === 'build'
+            ? {
+                techStack,
+                platform,
+                temperature: `${temperature} (${getTemperatureLabel(temperature)})`,
+                colorPalette: `${activePalette.name} (Background: ${activePalette.bg}, Surface: ${activePalette.surface}, Accent: ${activePalette.accent})`,
+                libraries: selectedLibraries,
+              }
+            : undefined,
       });
 
       if (response.success && response.data) {
@@ -228,34 +333,12 @@ export const CompilerStudio = () => {
           </Button>
         </div>
 
-        {/* ================= ALL CONFIGURATION IN ADVANCED SECTION ================= */}
+        {/* ================= ADVANCED CONFIGURATION SECTION ================= */}
         {mode === 'build' && showAdvanced && (
-          <div className="mt-3 p-5 bg-zinc-50/80 rounded-2xl space-y-5 animate-in fade-in duration-150">
-            {/* 1. Build Type */}
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-zinc-500">
-                Build Type
-              </span>
-              <div className="flex bg-zinc-100 p-0.5 rounded-lg text-xs">
-                {BUILD_TYPES.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setBuildType(type)}
-                    className={`px-3 py-1 rounded-md transition-colors ${
-                      buildType === type
-                        ? 'bg-white text-zinc-950 font-medium shadow-xs'
-                        : 'text-zinc-500 hover:text-zinc-900'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 2 & 3. Tech Stack & Platform */}
+          <div className="mt-3 p-5 bg-zinc-50/80 rounded-2xl space-y-6 animate-in fade-in duration-150">
+            {/* 1. Tech Stack & Platform */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Expanded Tech Stack with Groups */}
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-zinc-500 block">
                   Tech Stack
@@ -265,17 +348,22 @@ export const CompilerStudio = () => {
                   onChange={(e) => setTechStack(e.target.value)}
                   className="w-full text-xs text-zinc-900 bg-white px-3 py-2 rounded-lg outline-none cursor-pointer"
                 >
-                  {TECH_STACKS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
+                  {TECH_STACK_CATEGORIES.map((cat) => (
+                    <optgroup key={cat.group} label={cat.group}>
+                      {cat.stacks.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
 
+              {/* Target Platform */}
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-zinc-500 block">
-                  Platform
+                  Target Platform
                 </span>
                 <select
                   value={platform}
@@ -291,7 +379,7 @@ export const CompilerStudio = () => {
               </div>
             </div>
 
-            {/* 4. Temperature Slider */}
+            {/* 2. Temperature Slider */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-zinc-500">
@@ -315,34 +403,101 @@ export const CompilerStudio = () => {
               </div>
             </div>
 
-            {/* 5. Color Palette */}
-            <div className="space-y-1.5">
-              <span className="text-xs font-medium text-zinc-500 block">
-                Color Palette
-              </span>
+            {/* 3. Dynamic & Interactive Color Palette Selector */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-500">
+                  Color Palette
+                </span>
+                <span className="text-[11px] text-zinc-400">
+                  Selected: <span className="font-medium text-zinc-700">{activePalette.name}</span>
+                </span>
+              </div>
+
+              {/* Palette Cards Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {COLOR_PALETTES.map((palette) => {
-                  const isSelected = colorPalette === palette.name;
+                  const isSelected = selectedPaletteId === palette.id;
                   return (
                     <button
-                      key={palette.name}
+                      key={palette.id}
                       type="button"
-                      onClick={() => setColorPalette(palette.name)}
-                      className={`p-2 rounded-lg text-left text-xs transition-colors flex items-center gap-2 ${
+                      onClick={() => setSelectedPaletteId(palette.id)}
+                      className={`p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 ${
                         isSelected
-                          ? 'bg-white text-zinc-950 shadow-xs font-medium'
-                          : 'bg-zinc-100/60 text-zinc-600 hover:bg-zinc-100'
+                          ? 'bg-white shadow-xs ring-1 ring-zinc-950/10'
+                          : 'bg-zinc-100/60 hover:bg-zinc-100'
                       }`}
                     >
-                      <span className={`w-2.5 h-2.5 rounded-full ${palette.dot} shrink-0`} />
-                      <span className="truncate">{palette.name}</span>
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-medium text-zinc-900 truncate">
+                          {palette.name}
+                        </span>
+                        {isSelected && (
+                          <Check className="w-3.5 h-3.5 text-zinc-950 shrink-0" />
+                        )}
+                      </div>
+
+                      {/* 4-Swatch Bar Preview */}
+                      <div className="flex h-2.5 w-full rounded-md overflow-hidden">
+                        {palette.colors.map((c, i) => (
+                          <div
+                            key={i}
+                            className="flex-1 h-full"
+                            style={{ backgroundColor: c }}
+                            title={c}
+                          />
+                        ))}
+                      </div>
                     </button>
                   );
                 })}
               </div>
+
+              {/* Dynamic Live Preview Box */}
+              <div
+                className="p-3.5 rounded-xl transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                style={{
+                  backgroundColor: activePalette.surface,
+                  color: activePalette.text,
+                }}
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold">
+                      {activePalette.name}
+                    </span>
+                    <span
+                      className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                      style={{
+                        backgroundColor: activePalette.bg,
+                        color: activePalette.text,
+                      }}
+                    >
+                      Live Preview
+                    </span>
+                  </div>
+                  <p className="text-[11px] opacity-75">
+                    {activePalette.desc}
+                  </p>
+                </div>
+
+                {/* Sample interactive button in this palette */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className="px-2.5 py-1 rounded-md text-xs font-medium select-none shadow-xs"
+                    style={{
+                      backgroundColor: activePalette.accent,
+                      color: activePalette.accentText,
+                    }}
+                  >
+                    Sample Action
+                  </span>
+                </div>
+              </div>
             </div>
 
-            {/* 6. Libraries (Searchable Multi-Select) */}
+            {/* 4. Libraries (Searchable Multi-Select) */}
             <div className="space-y-2">
               <span className="text-xs font-medium text-zinc-500 block">
                 Libraries & Dependencies
@@ -382,7 +537,7 @@ export const CompilerStudio = () => {
                 </div>
               )}
 
-              {/* Suggestions */}
+              {/* Suggestion Chips */}
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {CURATED_LIBRARIES.filter((lib) =>
                   lib.toLowerCase().includes(libSearch.toLowerCase())
