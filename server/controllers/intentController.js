@@ -165,7 +165,7 @@ ${projectRules.map((r) => `- ${r}`).join('\n')}
  */
 export const compileIntent = async (req, res) => {
   try {
-    const { rawPrompt, targetAgent, mode = 'build', rules } = req.body;
+    const { rawPrompt, targetAgent, mode = 'build', rules = [], config } = req.body;
 
     if (!rawPrompt || rawPrompt.trim().length === 0) {
       return res.status(400).json({
@@ -174,7 +174,16 @@ export const compileIntent = async (req, res) => {
       });
     }
 
-    const compilation = compileDeveloperIntent(rawPrompt, targetAgent, mode, rules);
+    const effectiveRules = [
+      ...(Array.isArray(rules) ? rules : []),
+      ...(config?.buildType ? [`Build Type: ${config.buildType}`] : []),
+      ...(config?.techStack ? [`Tech Stack: ${config.techStack}`] : []),
+      ...(config?.temperature ? [`Temperature: ${config.temperature}`] : []),
+      ...(config?.colorPalette ? [`Design Palette: ${config.colorPalette}`] : []),
+      ...(config?.libraries?.length ? [`Libraries: ${config.libraries.join(', ')}`] : []),
+    ];
+
+    const compilation = compileDeveloperIntent(rawPrompt, targetAgent, mode, effectiveRules);
 
     let savedTask = null;
     if (getDbStatus()) {
