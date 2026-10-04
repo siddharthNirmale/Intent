@@ -27,7 +27,7 @@ const intentTaskSchema = new mongoose.Schema(
     },
     compilationSource: {
       type: String,
-      enum: ['gemini-ai', 'rule-engine'],
+      enum: ['groq-ai', 'gemini-ai', 'rule-engine'],
       default: 'rule-engine',
     },
     projectRules: [{ type: String }],

@@ -36,6 +36,13 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     apiKeys: {
+      groq: {
+        encryptedKey: { type: String, select: false, default: '' },
+        iv: { type: String, select: false, default: '' },
+        authTag: { type: String, select: false, default: '' },
+        isValid: { type: Boolean, default: false },
+        lastValidatedAt: { type: Date, default: null },
+      },
       gemini: {
         encryptedKey: { type: String, select: false, default: '' },
         iv: { type: String, select: false, default: '' },
@@ -77,11 +84,11 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Check if user has an active, valid personal Gemini API key configured
+// Check if user has an active, valid personal Groq API key configured
 userSchema.methods.hasPersonalKey = function () {
   return Boolean(
-    (this.apiKeys?.gemini?.encryptedKey || this.apiKey) &&
-    this.apiKeys?.gemini?.isValid !== false
+    this.apiKeys?.groq?.encryptedKey &&
+    this.apiKeys?.groq?.isValid !== false
   );
 };
 

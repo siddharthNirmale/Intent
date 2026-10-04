@@ -280,7 +280,7 @@ export const CompilerStudio = ({ onOpenAuth }) => {
           setPlatformOptions(res.data.map((agent) => ({ id: agent.id, label: agent.name })));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const activePalette =
@@ -504,15 +504,15 @@ export const CompilerStudio = ({ onOpenAuth }) => {
               : 'Paste error message or failing behavior...'
           }
           agentName={activeAgentId}
-          providerName="Gemini 3 Flash"
+          providerName="Groq (gpt-oss-120b)"
           statusText={
             !isAuthenticated
               ? 'Sign in required'
               : usage?.hasPersonalKey
-              ? ''
-              : usage?.trialExhausted
-              ? 'Trial limit (3/3)'
-              : `Attempts: ${usage?.attemptsCount ?? 0}/3`
+                ? ''
+                : usage?.trialExhausted
+                  ? 'Trial limit (3/3)'
+                  : `Attempts: ${usage?.attemptsCount ?? 0}/3`
           }
           submitLabel={mode === 'build' ? 'Compile' : 'Fix'}
           isLoading={loading}
@@ -903,7 +903,7 @@ export const CompilerStudio = ({ onOpenAuth }) => {
             <div className="space-y-1.5">
               <h2 className="text-sm font-semibold text-zinc-950">Free trial completed</h2>
               <p className="text-xs text-zinc-500 leading-relaxed">
-                You have used all 3 free attempts. Add your free Google Gemini API key in Settings to continue unlimited usage.
+                You have used all 3 free attempts. Add your free Groq API key in Settings to continue unlimited usage.
               </p>
             </div>
 

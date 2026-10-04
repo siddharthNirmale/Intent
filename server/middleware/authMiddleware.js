@@ -30,7 +30,7 @@ export const protect = async (req, res, next) => {
       }
 
       const user = await User.findById(decoded.id).select(
-        '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag +apiKeys.gemini.isValid +apiKeys.gemini.lastValidatedAt'
+        '+apiKeys.groq.encryptedKey +apiKeys.groq.iv +apiKeys.groq.authTag +apiKeys.groq.isValid +apiKeys.groq.lastValidatedAt +apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag +apiKeys.gemini.isValid +apiKeys.gemini.lastValidatedAt'
       );
 
       if (!user) {
@@ -74,7 +74,7 @@ export const optionalAuth = async (req, res, next) => {
 
         if (getDbStatus()) {
           const user = await User.findById(decoded.id).select(
-            '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag +apiKeys.gemini.isValid +apiKeys.gemini.lastValidatedAt'
+            '+apiKeys.groq.encryptedKey +apiKeys.groq.iv +apiKeys.groq.authTag +apiKeys.groq.isValid +apiKeys.groq.lastValidatedAt +apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag +apiKeys.gemini.isValid +apiKeys.gemini.lastValidatedAt'
           );
           if (user) {
             req.user = user;

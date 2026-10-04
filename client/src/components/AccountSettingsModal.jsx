@@ -151,12 +151,12 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
     e.preventDefault();
     const trimmedKey = apiKeyInput.trim();
     if (!trimmedKey) {
-      setKeyMessage({ text: 'Please enter a Gemini API key to save & verify', type: 'error' });
+      setKeyMessage({ text: 'Please enter a Groq API key to save & verify', type: 'error' });
       return;
     }
 
     setKeyLoading(true);
-    setKeyMessage({ text: 'Verifying key with Google Gemini API...', type: 'info' });
+    setKeyMessage({ text: 'Verifying key with Groq API...', type: 'info' });
 
     try {
       const res = await apiAuth.updateApiKey(trimmedKey);
@@ -165,7 +165,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
         setIsKeyValid(true);
         setApiKeyInput(''); // Never retain raw plaintext in memory
         setKeyMessage({
-          text: 'Personal Gemini API key verified & encrypted on backend',
+          text: 'Personal Groq API key verified & encrypted on backend',
           type: 'success',
         });
         if (typeof refreshUsage === 'function') refreshUsage();
@@ -192,7 +192,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
       setHasKey(false);
       setIsKeyValid(false);
       setApiKeyInput('');
-      setKeyMessage({ text: 'Personal Gemini API key removed', type: 'success' });
+      setKeyMessage({ text: 'Personal Groq API key removed', type: 'success' });
       if (typeof refreshUsage === 'function') refreshUsage();
       setTimeout(() => {
         setKeyMessage({ text: '', type: '' });
@@ -423,13 +423,13 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
           </form>
         )}
 
-        {/* TAB 2: SETTINGS (PERSONAL GEMINI API KEY) */}
+        {/* TAB 2: SETTINGS (PERSONAL GROQ API KEY) */}
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveApiKey} className="space-y-3.5 pt-0.5">
             {/* 1. Header & Status */}
             <div className="flex items-center justify-between">
-              <label htmlFor="gemini-key" className="text-xs font-semibold text-zinc-900">
-                Personal Google Gemini API Key
+              <label htmlFor="groq-key" className="text-xs font-semibold text-zinc-900">
+                Personal Groq API Key
               </label>
               <span className={`text-[11px] font-medium ${hasKey ? (isKeyValid ? 'text-emerald-700' : 'text-amber-700') : usage?.trialExhausted ? 'text-amber-700' : 'text-zinc-500'}`}>
                 {hasKey
@@ -445,12 +445,12 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
             {/* 2. Key Input */}
             <div className="relative">
               <input
-                id="gemini-key"
+                id="groq-key"
                 type={showApiKey ? 'text' : 'password'}
                 placeholder={
                   hasKey
                     ? '•••••••••••••••• (Personal key saved • enter new key to replace)'
-                    : 'Paste your Google Gemini API key'
+                    : 'Paste your Groq API key'
                 }
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
@@ -477,7 +477,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
               <p className="text-[11px] text-zinc-500 leading-relaxed">
                 {hasKey
                   ? 'Your personal API key is used for all prompt compilations. Entering a new key will replace the current key.'
-                  : 'Add your free Google Gemini API key for unlimited prompt compilations. Keys are verified live and encrypted at rest.'}
+                  : 'Add your free Groq API key for unlimited prompt compilations. Keys are verified live and encrypted at rest.'}
               </p>
             </div>
 

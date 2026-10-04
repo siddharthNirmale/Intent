@@ -17,7 +17,7 @@ export const PromptBox = ({
   isLoading = false,
   disabled = false,
   agentName = 'Antigravity',
-  providerName = 'Google Gemini 3',
+  providerName = 'Groq',
   statusText = '',
   submitLabel = 'Compile Intent',
   onClear,

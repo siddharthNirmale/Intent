@@ -90,7 +90,7 @@ export const apiAuth = {
       method: 'GET',
     }),
 
-  // Validate with Google Gemini and securely save encrypted on backend
+  // Validate with Groq and securely save encrypted on backend
   updateApiKey: (apiKey) =>
     request('/auth/api-key', {
       method: 'PUT',

@@ -2,7 +2,7 @@ import IntentTask from '../models/IntentTask.js';
 import User from '../models/User.js';
 import { getDbStatus } from '../config/db.js';
 import agentRegistry from '../services/agents/agentRegistry.js';
-import { compileWithGemini } from '../services/ai/geminiService.js';
+import { compileWithGroq } from '../services/ai/groqService.js';
 import { decryptApiKey } from '../services/cryptoService.js';
 
 // Predefined System Defaults for Initial Build Advanced Settings
@@ -157,11 +157,11 @@ export const compileIntent = async (req, res) => {
     }
 
     // 3. User Key Resolution & Free Trial Quota Enforcement
-    // Check if user has their own valid, encrypted personal Gemini key configured
-    let activeGeminiKey = '';
+    // Check if user has their own valid, encrypted personal Groq key configured
+    let activeGroqKey = '';
     const hasPersonalKey = Boolean(
-      (req.user.apiKeys?.gemini?.encryptedKey || req.user.apiKey) &&
-      req.user.apiKeys?.gemini?.isValid !== false
+      req.user.apiKeys?.groq?.encryptedKey &&
+      req.user.apiKeys?.groq?.isValid !== false
     );
 
     let usage = {
@@ -173,17 +173,13 @@ export const compileIntent = async (req, res) => {
     };
 
     if (hasPersonalKey) {
-      // User is using their own personal Gemini key -> Unlimited compiles
-      if (req.user.apiKeys?.gemini?.encryptedKey) {
-        activeGeminiKey = decryptApiKey(req.user.apiKeys.gemini);
-      } else if (req.user.apiKey) {
-        activeGeminiKey = req.user.apiKey.trim();
-      }
+      // User is using their own personal Groq key -> Unlimited compiles
+      activeGroqKey = decryptApiKey(req.user.apiKeys.groq);
 
-      if (!activeGeminiKey) {
+      if (!activeGroqKey) {
         return res.status(400).json({
           success: false,
-          message: 'Unable to decrypt your saved personal Gemini API key. Please re-enter your key in Settings.',
+          message: 'Unable to decrypt your saved personal Groq API key. Please re-enter your key in Settings.',
         });
       }
 
@@ -198,7 +194,7 @@ export const compileIntent = async (req, res) => {
         return res.status(403).json({
           success: false,
           trialExhausted: true,
-          message: 'Free trial limit reached (3/3 attempts). Please add your free Google Gemini API key in Settings to continue unlimited usage.',
+          message: 'Free trial limit reached (3/3 attempts). Please add your free Groq API key in Settings to continue unlimited usage.',
           usage: {
             attemptsCount: currentAttempts,
             maxFreeAttempts: maxAttempts,
@@ -220,7 +216,7 @@ export const compileIntent = async (req, res) => {
         return res.status(403).json({
           success: false,
           trialExhausted: true,
-          message: 'Free trial limit reached (3/3 attempts). Please add your free Google Gemini API key in Settings to continue unlimited usage.',
+          message: 'Free trial limit reached (3/3 attempts). Please add your free Groq API key in Settings to continue unlimited usage.',
           usage: {
             attemptsCount: maxAttempts,
             maxFreeAttempts: maxAttempts,
@@ -241,8 +237,8 @@ export const compileIntent = async (req, res) => {
       };
 
       // Server-level fallback key provides AI during free trial attempts
-      if (process.env.GEMINI_API_KEY) {
-        activeGeminiKey = process.env.GEMINI_API_KEY.trim();
+      if (process.env.GROQ_API_KEY) {
+        activeGroqKey = process.env.GROQ_API_KEY.trim();
       }
     }
 
@@ -262,8 +258,8 @@ export const compileIntent = async (req, res) => {
     let refinedResult = '';
     let compilationSource = 'rule-engine';
 
-    // 6. If an active key is present, refine command with real Gemini AI
-    if (activeGeminiKey) {
+    // 6. If an active key is present, refine command with real Groq AI
+    if (activeGroqKey) {
       try {
         let temperature = 0.2;
         if (config.temperature !== undefined) {
@@ -273,25 +269,25 @@ export const compileIntent = async (req, res) => {
           }
         }
 
-        refinedResult = await compileWithGemini({
-          apiKey: activeGeminiKey,
+        refinedResult = await compileWithGroq({
+          apiKey: activeGroqKey,
           userContextText,
           temperature,
         });
 
-        compilationSource = 'gemini-ai';
-      } catch (geminiError) {
-        console.warn('[Compile Intent] Gemini AI refinement failed. Reason:', geminiError.message);
+        compilationSource = 'groq-ai';
+      } catch (groqError) {
+        console.warn('[Compile Intent] Groq AI refinement failed. Reason:', groqError.message);
         if (hasPersonalKey) {
           return res.status(400).json({
             success: false,
-            message: `Your personal Gemini API key was rejected: ${geminiError.message}. Please check or replace your key in Settings.`,
+            message: `Your personal Groq API key was rejected: ${groqError.message}. Please check or replace your key in Settings.`,
           });
         }
       }
     }
 
-    // Gracefully fall back to direct natural refinement if Gemini wasn't used or failed
+    // Gracefully fall back to direct natural refinement if Groq wasn't used or failed
     if (!refinedResult) {
       refinedResult = compileDeveloperIntent({
         rawPrompt,

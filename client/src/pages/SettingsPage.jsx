@@ -44,7 +44,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
   const [activeSection, setActiveSection] = useState(() => (hash === '#settings' ? 'settings' : 'account'));
 
   const nameInputRef = useRef(null);
-  const geminiKeyInputRef = useRef(null);
+  const groqKeyInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // My Account state
@@ -84,7 +84,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
   useEffect(() => {
     if (hash === '#settings') {
       setActiveSection('settings');
-      setTimeout(() => geminiKeyInputRef.current?.focus(), 100);
+      setTimeout(() => groqKeyInputRef.current?.focus(), 100);
     } else if (hash === '#account' || hash === '') {
       setActiveSection('account');
       setTimeout(() => nameInputRef.current?.focus(), 100);
@@ -138,12 +138,12 @@ export const SettingsPage = ({ onOpenAuth }) => {
     e.preventDefault();
     const trimmed = apiKeyInput.trim();
     if (!trimmed) {
-      setKeyMessage({ text: 'Please enter a Gemini API key to save', type: 'error' });
+      setKeyMessage({ text: 'Please enter a Groq API key to save', type: 'error' });
       return;
     }
 
     setKeyLoading(true);
-    setKeyMessage({ text: 'Verifying with Google Gemini...', type: 'info' });
+    setKeyMessage({ text: 'Verifying with Groq...', type: 'info' });
 
     try {
       const res = await apiAuth.updateApiKey(trimmed);
@@ -151,7 +151,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
         setHasKey(true);
         setIsKeyValid(true);
         setApiKeyInput('');
-        setKeyMessage({ text: 'Personal Gemini API key verified and saved', type: 'success' });
+        setKeyMessage({ text: 'Personal Groq API key verified and saved', type: 'success' });
         if (typeof refreshUsage === 'function') refreshUsage();
       } else {
         throw new Error(res?.message || 'Verification failed');
@@ -417,11 +417,11 @@ export const SettingsPage = ({ onOpenAuth }) => {
 
               <Card>
                 <CardContent className="p-6 space-y-4">
-                  {/* Personal Gemini API Key Form */}
+                  {/* Personal Groq API Key Form */}
                   <form onSubmit={handleSaveApiKey} className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="gemini-key" className="text-xs font-semibold text-zinc-900">
-                        Personal Google Gemini API Key
+                      <label htmlFor="groq-key" className="text-xs font-semibold text-zinc-900">
+                        Personal Groq API Key
                       </label>
                       <Badge
                         variant={hasKey ? (isKeyValid ? 'success' : 'warning') : 'neutral'}
@@ -439,13 +439,13 @@ export const SettingsPage = ({ onOpenAuth }) => {
 
                     <div className="relative">
                       <input
-                        id="gemini-key"
-                        ref={geminiKeyInputRef}
+                        id="groq-key"
+                        ref={groqKeyInputRef}
                         type={showApiKey ? 'text' : 'password'}
                         placeholder={
                           hasKey
                             ? '•••••••••••••••• (Personal key saved • enter new key to replace)'
-                            : 'Paste your Google Gemini API key'
+                            : 'Paste your Groq API key'
                         }
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
@@ -466,7 +466,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
                     <p className="text-[11px] text-zinc-500 leading-relaxed">
                       {hasKey
                         ? 'Your personal API key is active and used for all prompt compilations. Entering a new key will replace your current key.'
-                        : 'Add your free Google Gemini API key to unlock unlimited prompt compilations. Keys are verified live and encrypted at rest.'}
+                        : 'Add your free Groq API key to unlock unlimited prompt compilations. Keys are verified live and encrypted at rest.'}
                     </p>
 
                     {keyMessage.text && (
