@@ -42,7 +42,7 @@ const AVATAR_PRESETS = [
 const svgToDataUrl = (svgString) => `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
 
 export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }) => {
-  const { user, updateProfile, refreshUsage } = useAuth();
+  const { user, usage, updateProfile, refreshUsage } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Account state
@@ -58,7 +58,6 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
   const [showApiKey, setShowApiKey] = useState(false);
   const [hasKey, setHasKey] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState(false);
-  const [isDefaultKey, setIsDefaultKey] = useState(false);
   const [keyLoading, setKeyLoading] = useState(false);
   const [keyMessage, setKeyMessage] = useState({ text: '', type: '' });
 
@@ -73,13 +72,12 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
       setKeyMessage({ text: '', type: '' });
       setApiKeyInput('');
 
-      // Check backend for API key configuration status (secure, masked, never returns raw key)
+      // Check backend for personal API key configuration status
       apiAuth.getApiKey()
         .then((res) => {
           if (res?.success) {
-            setHasKey(Boolean(res.hasKey));
+            setHasKey(Boolean(res.hasPersonalKey ?? res.hasKey));
             setIsKeyValid(Boolean(res.isValid));
-            setIsDefaultKey(Boolean(res.isDefaultKey));
           }
         })
         .catch(() => {});
@@ -167,7 +165,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
         setIsKeyValid(true);
         setApiKeyInput(''); // Never retain raw plaintext in memory
         setKeyMessage({
-          text: 'Gemini API key verified & encrypted on backend',
+          text: 'Personal Gemini API key verified & encrypted on backend',
           type: 'success',
         });
         if (typeof refreshUsage === 'function') refreshUsage();
@@ -178,7 +176,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
         setKeyMessage({ text: '', type: '' });
       }, 4000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Failed to verify key', type: 'error' });
+      setKeyMessage({ text: err.message || 'Failed to verify key. Please check your key.', type: 'error' });
     } finally {
       setKeyLoading(false);
     }
@@ -194,7 +192,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
       setHasKey(false);
       setIsKeyValid(false);
       setApiKeyInput('');
-      setKeyMessage({ text: 'Gemini API key removed', type: 'success' });
+      setKeyMessage({ text: 'Personal Gemini API key removed', type: 'success' });
       if (typeof refreshUsage === 'function') refreshUsage();
       setTimeout(() => {
         setKeyMessage({ text: '', type: '' });
@@ -425,19 +423,23 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
           </form>
         )}
 
-        {/* TAB 2: SETTINGS (GEMINI API KEY) */}
+        {/* TAB 2: SETTINGS (PERSONAL GEMINI API KEY) */}
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveApiKey} className="space-y-3.5 pt-0.5">
             {/* 1. Header & Status */}
             <div className="flex items-center justify-between">
               <label htmlFor="gemini-key" className="text-xs font-semibold text-zinc-900">
-                Gemini API Key
+                Personal Google Gemini API Key
               </label>
-              {hasKey && (
-                <span className="text-[11px] font-medium text-emerald-700">
-                  {isKeyValid ? (isDefaultKey ? 'Default Active' : 'Active & Validated') : 'Configured'}
-                </span>
-              )}
+              <span className={`text-[11px] font-medium ${hasKey ? (isKeyValid ? 'text-emerald-700' : 'text-amber-700') : usage?.trialExhausted ? 'text-amber-700' : 'text-zinc-500'}`}>
+                {hasKey
+                  ? isKeyValid
+                    ? 'Personal Key Active'
+                    : 'Configured'
+                  : usage?.trialExhausted
+                  ? 'Trial Ended • Key Required'
+                  : `Free Trial (${usage?.attemptsCount || 0}/3 used)`}
+              </span>
             </div>
 
             {/* 2. Key Input */}
@@ -445,7 +447,11 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
               <input
                 id="gemini-key"
                 type={showApiKey ? 'text' : 'password'}
-                placeholder={hasKey ? (isDefaultKey ? "•••••••••••••••• (Default Server Key)" : "Key configured • Enter new key to update") : "AIzaSy..."}
+                placeholder={
+                  hasKey
+                    ? '•••••••••••••••• (Personal key saved • enter new key to replace)'
+                    : 'Paste your Google Gemini API key'
+                }
                 value={apiKeyInput}
                 onChange={(e) => setApiKeyInput(e.target.value)}
                 className="w-full h-9 pl-3 pr-8 text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/70 font-mono transition-colors"
@@ -466,13 +472,12 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
               </button>
             </div>
 
-            {/* 3. Security & Agent Notice */}
+            {/* 3. Security & Usage Notice */}
             <div className="space-y-1">
               <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Keys are verified with Google Generative AI, encrypted with AES-256-GCM at rest, and never exposed in browser storage.
-              </p>
-              <p className="text-[10px] text-zinc-400">
-                Support for additional AI agents (OpenAI, Claude, DeepSeek) will be available in future releases.
+                {hasKey
+                  ? 'Your personal API key is used for all prompt compilations. Entering a new key will replace the current key.'
+                  : 'Add your free Google Gemini API key for unlimited prompt compilations. Keys are verified live and encrypted at rest.'}
               </p>
             </div>
 
@@ -500,10 +505,10 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
                 className="flex-1 text-xs h-8"
                 isLoading={keyLoading}
               >
-                {hasKey ? 'Update key' : 'Save & Verify'}
+                {hasKey ? 'Replace key' : 'Add key'}
               </Button>
 
-              {hasKey && !isDefaultKey && (
+              {hasKey && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -512,7 +517,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
                   className="text-xs h-8 text-zinc-400 hover:text-red-600"
                   disabled={keyLoading}
                 >
-                  Remove Key
+                  Remove key
                 </Button>
               )}
             </div>

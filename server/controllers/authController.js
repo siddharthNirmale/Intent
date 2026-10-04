@@ -291,21 +291,29 @@ export const getApiKey = async (req, res) => {
     }
 
     const geminiConfig = user.apiKeys?.gemini;
-    const hasUserKey = Boolean(geminiConfig?.encryptedKey || user.apiKey);
-    const hasServerKey = Boolean(process.env.GEMINI_API_KEY);
-    const hasKey = hasUserKey || hasServerKey;
-    const isValid = hasUserKey ? Boolean(geminiConfig?.isValid) : hasServerKey;
-    const isDefaultKey = !hasUserKey && hasServerKey;
+    const hasPersonalKey = Boolean(geminiConfig?.encryptedKey || user.apiKey);
+    const isValid = hasPersonalKey ? Boolean(geminiConfig?.isValid) : false;
     const lastValidatedAt = geminiConfig?.lastValidatedAt || null;
+
+    const attemptsCount = user.usage?.attemptsCount || 0;
+    const maxFreeAttempts = user.usage?.maxFreeAttempts || 3;
+    const remainingAttempts = Math.max(0, maxFreeAttempts - attemptsCount);
+    const trialExhausted = !hasPersonalKey && attemptsCount >= maxFreeAttempts;
 
     // SECURITY: Never return raw API key in response payload
     return res.status(200).json({
       success: true,
       provider: 'gemini',
-      hasKey,
+      hasPersonalKey,
+      hasKey: hasPersonalKey, // strictly reflects personal key status
       isValid,
-      isDefaultKey,
       lastValidatedAt,
+      trialStatus: {
+        attemptsCount,
+        maxFreeAttempts,
+        remainingAttempts,
+        trialExhausted,
+      },
     });
   } catch (error) {
     console.error('[Get API Key Error]:', error.message);
@@ -317,7 +325,7 @@ export const getApiKey = async (req, res) => {
 };
 
 /**
- * @desc    Validate and securely store Gemini API key
+ * @desc    Validate and securely store personal Gemini API key
  * @route   PUT /api/auth/api-key
  * @access  Private
  */
@@ -340,7 +348,7 @@ export const updateApiKey = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // If key is empty, clear it
+    // If key is empty, clear personal key
     if (!cleanKey) {
       if (!user.apiKeys) user.apiKeys = {};
       user.apiKeys.gemini = {
@@ -355,19 +363,20 @@ export const updateApiKey = async (req, res) => {
 
       return res.status(200).json({
         success: true,
-        message: 'Gemini API key cleared successfully',
+        message: 'Personal Gemini API key cleared successfully',
         provider: 'gemini',
         hasKey: false,
+        hasPersonalKey: false,
         isValid: false,
         lastValidatedAt: null,
       });
     }
 
-    // 1. Sanitize and verify key format before network transmission
-    if (cleanKey.length < 20 || cleanKey.length > 120 || !/^[a-zA-Z0-9_\-]+$/.test(cleanKey)) {
+    // 1. Sanitize input: require valid length, no internal spaces. Avoid overly restrictive hardcoded regex.
+    if (cleanKey.length < 10 || cleanKey.length > 512 || /\s/.test(cleanKey)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid API key format. Please provide a genuine Google Gemini API key.',
+        message: 'Please provide a valid Google Gemini API key without spaces.',
       });
     }
 
@@ -384,6 +393,7 @@ export const updateApiKey = async (req, res) => {
     const encryptedPacket = encryptApiKey(cleanKey);
 
     if (!user.apiKeys) user.apiKeys = {};
+    // Only one personal API key per user: cleanly replace the existing personal key
     user.apiKeys.gemini = {
       encryptedKey: encryptedPacket.encrypted,
       iv: encryptedPacket.iv,
@@ -400,9 +410,10 @@ export const updateApiKey = async (req, res) => {
     // SECURITY: Never expose raw API key in response
     return res.status(200).json({
       success: true,
-      message: 'Gemini API key verified and securely encrypted',
+      message: 'Personal Gemini API key verified and securely saved',
       provider: 'gemini',
       hasKey: true,
+      hasPersonalKey: true,
       isValid: true,
       lastValidatedAt: user.apiKeys.gemini.lastValidatedAt,
       usage: {
@@ -423,7 +434,7 @@ export const updateApiKey = async (req, res) => {
 };
 
 /**
- * @desc    Clear Gemini API key
+ * @desc    Clear personal Gemini API key
  * @route   DELETE /api/auth/api-key
  * @access  Private
  */
@@ -436,7 +447,9 @@ export const clearApiKey = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id).select(
+      '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag'
+    );
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -458,10 +471,12 @@ export const clearApiKey = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: 'Gemini API key removed successfully',
+      message: 'Personal Gemini API key removed successfully',
       provider: 'gemini',
       hasKey: false,
+      hasPersonalKey: false,
       isValid: false,
+      lastValidatedAt: null,
       usage: {
         attemptsCount,
         maxFreeAttempts,

@@ -38,7 +38,7 @@ const AVATAR_PRESETS = [
 const svgToDataUrl = (svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
 export const SettingsPage = ({ onOpenAuth }) => {
-  const { user, isAuthenticated, loading: authLoading, updateProfile, refreshUsage } = useAuth();
+  const { user, usage, isAuthenticated, loading: authLoading, updateProfile, refreshUsage } = useAuth();
   const { hash, navigate } = useRouter();
 
   const [activeSection, setActiveSection] = useState(() => (hash === '#settings' ? 'settings' : 'account'));
@@ -58,7 +58,6 @@ export const SettingsPage = ({ onOpenAuth }) => {
   const [showApiKey, setShowApiKey] = useState(false);
   const [hasKey, setHasKey] = useState(false);
   const [isKeyValid, setIsKeyValid] = useState(false);
-  const [isDefaultKey, setIsDefaultKey] = useState(false);
   const [keyLoading, setKeyLoading] = useState(false);
   const [keyMessage, setKeyMessage] = useState({ text: '', type: '' });
 
@@ -74,9 +73,8 @@ export const SettingsPage = ({ onOpenAuth }) => {
       apiAuth.getApiKey()
         .then((res) => {
           if (res?.success) {
-            setHasKey(Boolean(res.hasKey));
+            setHasKey(Boolean(res.hasPersonalKey ?? res.hasKey));
             setIsKeyValid(Boolean(res.isValid));
-            setIsDefaultKey(Boolean(res.isDefaultKey));
           }
         })
         .catch(() => {});
@@ -139,10 +137,13 @@ export const SettingsPage = ({ onOpenAuth }) => {
   const handleSaveApiKey = async (e) => {
     e.preventDefault();
     const trimmed = apiKeyInput.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      setKeyMessage({ text: 'Please enter a Gemini API key to save', type: 'error' });
+      return;
+    }
 
     setKeyLoading(true);
-    setKeyMessage({ text: '', type: '' });
+    setKeyMessage({ text: 'Verifying with Google Gemini...', type: 'info' });
 
     try {
       const res = await apiAuth.updateApiKey(trimmed);
@@ -150,14 +151,14 @@ export const SettingsPage = ({ onOpenAuth }) => {
         setHasKey(true);
         setIsKeyValid(true);
         setApiKeyInput('');
-        setKeyMessage({ text: 'Verified and saved', type: 'success' });
+        setKeyMessage({ text: 'Personal Gemini API key verified and saved', type: 'success' });
         if (typeof refreshUsage === 'function') refreshUsage();
       } else {
         throw new Error(res?.message || 'Verification failed');
       }
-      setTimeout(() => setKeyMessage({ text: '', type: '' }), 3000);
+      setTimeout(() => setKeyMessage({ text: '', type: '' }), 4000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Verification failed', type: 'error' });
+      setKeyMessage({ text: err.message || 'Verification failed. Please check your key.', type: 'error' });
     } finally {
       setKeyLoading(false);
     }
@@ -172,11 +173,11 @@ export const SettingsPage = ({ onOpenAuth }) => {
       setHasKey(false);
       setIsKeyValid(false);
       setApiKeyInput('');
-      setKeyMessage({ text: 'Removed', type: 'success' });
+      setKeyMessage({ text: 'Personal API key removed', type: 'success' });
       if (typeof refreshUsage === 'function') refreshUsage();
-      setTimeout(() => setKeyMessage({ text: '', type: '' }), 2500);
+      setTimeout(() => setKeyMessage({ text: '', type: '' }), 3000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Failed to remove', type: 'error' });
+      setKeyMessage({ text: err.message || 'Failed to remove key', type: 'error' });
     } finally {
       setKeyLoading(false);
     }
@@ -411,19 +412,28 @@ export const SettingsPage = ({ onOpenAuth }) => {
           {activeSection === 'settings' && (
             <div id="settings" className="space-y-4">
               <h2 className="text-base font-semibold tracking-tight text-zinc-950">
-                Settings
+                API Key Management
               </h2>
 
               <Card>
                 <CardContent className="p-6 space-y-4">
-                  {/* Gemini API Key */}
+                  {/* Personal Gemini API Key Form */}
                   <form onSubmit={handleSaveApiKey} className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label htmlFor="gemini-key" className="text-xs font-medium text-zinc-700">
-                        Gemini API Key
+                      <label htmlFor="gemini-key" className="text-xs font-semibold text-zinc-900">
+                        Personal Google Gemini API Key
                       </label>
-                      <Badge variant={hasKey ? (isKeyValid ? 'success' : 'warning') : 'neutral'} className="text-[10px]">
-                        {hasKey ? (isKeyValid ? (isDefaultKey ? 'Default Active' : 'Active') : 'Configured') : 'Not set'}
+                      <Badge
+                        variant={hasKey ? (isKeyValid ? 'success' : 'warning') : 'neutral'}
+                        className="text-[10px]"
+                      >
+                        {hasKey
+                          ? isKeyValid
+                            ? 'Personal Key Active'
+                            : 'Configured'
+                          : usage?.trialExhausted
+                          ? 'Trial Ended • Key Required'
+                          : `Free Trial (${usage?.attemptsCount || 0}/3 used)`}
                       </Badge>
                     </div>
 
@@ -432,7 +442,11 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         id="gemini-key"
                         ref={geminiKeyInputRef}
                         type={showApiKey ? 'text' : 'password'}
-                        placeholder={hasKey ? (isDefaultKey ? "•••••••••••••••• (Default Server Key)" : "••••••••••••••••") : "AIzaSy..."}
+                        placeholder={
+                          hasKey
+                            ? '•••••••••••••••• (Personal key saved • enter new key to replace)'
+                            : 'Paste your Google Gemini API key'
+                        }
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
                         className="w-full h-8 pl-3 pr-8 text-xs bg-zinc-100/70 hover:bg-zinc-100 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-200/60 font-mono transition-colors"
@@ -443,13 +457,20 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         type="button"
                         onClick={() => setShowApiKey(!showApiKey)}
                         className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 p-1 cursor-pointer transition-colors"
+                        title={showApiKey ? 'Hide key' : 'Show key'}
                       >
                         {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
                     </div>
 
+                    <p className="text-[11px] text-zinc-500 leading-relaxed">
+                      {hasKey
+                        ? 'Your personal API key is active and used for all prompt compilations. Entering a new key will replace your current key.'
+                        : 'Add your free Google Gemini API key to unlock unlimited prompt compilations. Keys are verified live and encrypted at rest.'}
+                    </p>
+
                     {keyMessage.text && (
-                      <p className={`text-xs ${keyMessage.type === 'error' ? 'text-red-600' : 'text-emerald-600'}`}>
+                      <p className={`text-xs ${keyMessage.type === 'error' ? 'text-red-600' : keyMessage.type === 'info' ? 'text-zinc-600' : 'text-emerald-600'}`}>
                         {keyMessage.text}
                       </p>
                     )}
@@ -461,9 +482,9 @@ export const SettingsPage = ({ onOpenAuth }) => {
                         size="sm"
                         isLoading={keyLoading}
                       >
-                        {hasKey ? 'Update key' : 'Save key'}
+                        {hasKey ? 'Replace key' : 'Add key'}
                       </Button>
-                      {hasKey && !isDefaultKey && (
+                      {hasKey && (
                         <Button
                           type="button"
                           variant="destructive"
@@ -471,15 +492,10 @@ export const SettingsPage = ({ onOpenAuth }) => {
                           onClick={handleClearApiKey}
                           disabled={keyLoading}
                         >
-                          Remove custom key
+                          Remove key
                         </Button>
                       )}
                     </div>
-
-                    {/* Simple notice below Gemini API Key section */}
-                    <p className="text-xs text-zinc-400 pt-1.5">
-                      Other AI agent API access coming soon.
-                    </p>
                   </form>
                 </CardContent>
               </Card>

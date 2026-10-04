@@ -10,11 +10,11 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 // Gemini models in priority order based on availability
 const SUPPORTED_MODELS = [
   process.env.GEMINI_MODEL,
+  'gemini-2.5-flash',
+  'gemini-flash-latest',
   'gemini-3.8-flash',
   'gemini-3.7-flash',
   'gemini-3.5-flash',
-  'gemini-flash-latest',
-  'gemini-2.5-flash',
   'gemini-2.5-pro',
   'gemini-3-flash-preview',
 ].filter(Boolean);
@@ -39,22 +39,23 @@ export async function validateGeminiKey(apiKey) {
   if (!apiKey || typeof apiKey !== 'string') {
     return {
       isValid: false,
-      error: 'Please provide a valid Gemini API key.',
+      error: 'Please provide a valid Google Gemini API key.',
     };
   }
 
   const cleanKey = apiKey.trim();
 
-  // Format validation: Google API keys are alphanumeric + dashes/underscores/dots (typically 39-60 chars)
-  if (cleanKey.length < 20 || cleanKey.length > 120 || !/^[a-zA-Z0-9_\-.]+$/.test(cleanKey)) {
+  // Basic sanity check: prevent empty strings, internal whitespace, or unreasonable lengths
+  // Do NOT reject based on an overly restrictive regex, as Google API keys vary across platforms and versions
+  if (cleanKey.length < 10 || cleanKey.length > 512 || /\s/.test(cleanKey)) {
     return {
       isValid: false,
-      error: 'Invalid API key format. Please provide a valid Google Gemini API key.',
+      error: 'Invalid API key format. Please ensure your key has no spaces.',
     };
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout
 
   try {
     const url = `${GEMINI_API_BASE}/models?key=${encodeURIComponent(cleanKey)}`;
@@ -70,13 +71,33 @@ export async function validateGeminiKey(apiKey) {
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      const rawErrorMsg = errData?.error?.message || `Google API returned status ${response.status}`;
+      const rawErrorMsg = errData?.error?.message || `Status ${response.status}`;
       const safeErrorMsg = sanitizeMessage(rawErrorMsg, cleanKey);
 
+      // User-friendly mapping of common Google API rejections
       if (response.status === 400 || response.status === 403) {
+        if (/API_KEY_INVALID|not valid|invalid api key/i.test(rawErrorMsg)) {
+          return {
+            isValid: false,
+            error: 'Google rejected this API key as invalid or revoked. Please verify the key in Google AI Studio.',
+          };
+        }
+        if (/PERMISSION_DENIED|expired/i.test(rawErrorMsg)) {
+          return {
+            isValid: false,
+            error: 'Permission denied: This API key is unauthorized, restricted, or expired. Please check your Google Cloud / AI Studio project.',
+          };
+        }
         return {
           isValid: false,
           error: `Google rejected this API key: ${safeErrorMsg}`,
+        };
+      }
+
+      if (response.status === 429) {
+        return {
+          isValid: false,
+          error: 'This API key has exceeded its Google Gemini rate limit or quota.',
         };
       }
 
@@ -89,13 +110,13 @@ export async function validateGeminiKey(apiKey) {
     const data = await response.json();
     const models = Array.isArray(data?.models) ? data.models : [];
     const hasGeminiModels = models.some(
-      (m) => typeof m.name === 'string' && m.name.toLowerCase().includes('gemini')
+      (m) => typeof m.name === 'string' && (m.name.toLowerCase().includes('gemini') || m.name.toLowerCase().includes('gemma'))
     );
 
     if (models.length === 0 || !hasGeminiModels) {
       return {
         isValid: false,
-        error: 'Key was accepted, but no active Gemini models are available for this Google Cloud project.',
+        error: 'Key was accepted, but no active Gemini models are available for this Google project.',
       };
     }
 
@@ -108,14 +129,14 @@ export async function validateGeminiKey(apiKey) {
     if (err.name === 'AbortError') {
       return {
         isValid: false,
-        error: 'Connection to Google Gemini timed out. Please verify your network connection.',
+        error: 'Connection to Google Gemini timed out. Please check your network connection.',
       };
     }
 
     const safeMsg = sanitizeMessage(err.message, cleanKey);
     return {
       isValid: false,
-      error: `Could not verify key with Google Gemini: ${safeMsg}`,
+      error: `Could not reach Google Gemini to verify key: ${safeMsg}`,
     };
   }
 }

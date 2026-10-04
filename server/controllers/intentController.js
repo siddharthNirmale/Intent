@@ -269,7 +269,13 @@ export const compileIntent = async (req, res) => {
 
         compilationSource = 'gemini-ai';
       } catch (geminiError) {
-        console.warn('[Compile Intent] Gemini AI refinement unavailable, falling back. Reason:', geminiError.message);
+        console.warn('[Compile Intent] Gemini AI refinement failed. Reason:', geminiError.message);
+        if (hasPersonalKey) {
+          return res.status(400).json({
+            success: false,
+            message: `Your personal Gemini API key was rejected: ${geminiError.message}. Please check or replace your key in Settings.`,
+          });
+        }
       }
     }
 
