@@ -41,7 +41,7 @@ export const AppContent = () => {
         {isSettingsPage ? (
           <SettingsPage onOpenAuth={handleOpenAuth} />
         ) : (
-          <CompilerStudio />
+          <CompilerStudio onOpenAuth={handleOpenAuth} />
         )}
       </main>
 

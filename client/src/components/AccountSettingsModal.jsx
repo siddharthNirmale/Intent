@@ -42,7 +42,7 @@ const AVATAR_PRESETS = [
 const svgToDataUrl = (svgString) => `data:image/svg+xml;utf8,${encodeURIComponent(svgString)}`;
 
 export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }) => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, refreshUsage } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Account state
@@ -170,6 +170,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
           text: 'Gemini API key verified & encrypted on backend',
           type: 'success',
         });
+        if (typeof refreshUsage === 'function') refreshUsage();
       } else {
         throw new Error(res?.message || 'Verification failed');
       }
@@ -194,6 +195,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
       setIsKeyValid(false);
       setApiKeyInput('');
       setKeyMessage({ text: 'Gemini API key removed', type: 'success' });
+      if (typeof refreshUsage === 'function') refreshUsage();
       setTimeout(() => {
         setKeyMessage({ text: '', type: '' });
       }, 3000);

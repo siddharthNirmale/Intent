@@ -4,17 +4,18 @@ import {
   getIntentTasks,
   getSupportedAgents,
 } from '../controllers/intentController.js';
-import protect, { optionalAuth } from '../middleware/authMiddleware.js';
+import protect from '../middleware/authMiddleware.js';
+import { compileLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
 // Supported AI coding agents
 router.get('/agents', getSupportedAgents);
 
-// Compile intent with optional authentication (to use user's saved Gemini key if logged in)
-router.post('/compile', optionalAuth, compileIntent);
+// Compile intent (Strictly protected by authentication, authorization, and rate limiting)
+router.post('/compile', protect, compileLimiter, compileIntent);
 
-// Protected endpoint to retrieve history
+// Protected endpoint to retrieve history (Strict data isolation: only current user's tasks)
 router.get('/tasks', protect, getIntentTasks);
 
 export default router;

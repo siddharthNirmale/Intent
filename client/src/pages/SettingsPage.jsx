@@ -38,7 +38,7 @@ const AVATAR_PRESETS = [
 const svgToDataUrl = (svg) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
 export const SettingsPage = ({ onOpenAuth }) => {
-  const { user, isAuthenticated, loading: authLoading, updateProfile } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, updateProfile, refreshUsage } = useAuth();
   const { hash, navigate } = useRouter();
 
   const [activeSection, setActiveSection] = useState(() => (hash === '#settings' ? 'settings' : 'account'));
@@ -151,6 +151,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
         setIsKeyValid(true);
         setApiKeyInput('');
         setKeyMessage({ text: 'Verified and saved', type: 'success' });
+        if (typeof refreshUsage === 'function') refreshUsage();
       } else {
         throw new Error(res?.message || 'Verification failed');
       }
@@ -172,6 +173,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
       setIsKeyValid(false);
       setApiKeyInput('');
       setKeyMessage({ text: 'Removed', type: 'success' });
+      if (typeof refreshUsage === 'function') refreshUsage();
       setTimeout(() => setKeyMessage({ text: '', type: '' }), 2500);
     } catch (err) {
       setKeyMessage({ text: err.message || 'Failed to remove', type: 'error' });

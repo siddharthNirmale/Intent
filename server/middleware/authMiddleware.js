@@ -29,12 +29,14 @@ export const protect = async (req, res, next) => {
         });
       }
 
-      const user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select(
+        '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag'
+      );
 
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Not authorized, user not found',
+          message: 'Account not found. Please register or sign in.',
         });
       }
 
@@ -44,13 +46,13 @@ export const protect = async (req, res, next) => {
       console.error('[Auth Middleware Error]:', error.message);
       return res.status(401).json({
         success: false,
-        message: 'Not authorized, token invalid or expired',
+        message: 'Invalid or expired session. Please sign in again.',
       });
     }
   } else {
     return res.status(401).json({
       success: false,
-      message: 'Not authorized, no Bearer token provided in authorization header',
+      message: 'Authentication required. Please sign in to continue.',
     });
   }
 };

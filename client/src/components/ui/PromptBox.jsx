@@ -18,6 +18,7 @@ export const PromptBox = ({
   disabled = false,
   agentName = 'Antigravity',
   providerName = 'Google Gemini 3',
+  statusText = '',
   submitLabel = 'Compile Intent',
   onClear,
   minRows = 3,
@@ -104,6 +105,12 @@ export const PromptBox = ({
           <span className="hidden sm:inline-block text-zinc-400 text-[11px]">
             {providerName}
           </span>
+          {statusText && (
+            <>
+              <span className="text-zinc-300">•</span>
+              <span className="text-zinc-500 text-[11px] font-mono">{statusText}</span>
+            </>
+          )}
         </div>
 
         {/* Right: Shortcut Hint, Char Counter & Action Button */}

@@ -71,6 +71,13 @@ export const registerUser = async (req, res) => {
         avatar: user.avatar || '',
         createdAt: user.createdAt,
       },
+      usage: {
+        attemptsCount: 0,
+        maxFreeAttempts: 3,
+        remainingAttempts: 3,
+        hasPersonalKey: false,
+        trialExhausted: false,
+      },
       token,
     });
   } catch (error) {
@@ -106,8 +113,10 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Check for user (explicitly selecting password field which is hidden by default)
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    // Check for user (explicitly selecting password and apiKeys fields which are hidden by default)
+    const user = await User.findOne({ email: email.toLowerCase() }).select(
+      '+password +apiKeys.gemini.encryptedKey +apiKeys.gemini.isValid'
+    );
 
     if (!user) {
       return res.status(401).json({
@@ -126,6 +135,14 @@ export const loginUser = async (req, res) => {
     }
 
     const token = generateToken(user._id);
+    const hasPersonalKey = Boolean(
+      user.apiKeys?.gemini?.encryptedKey &&
+      user.apiKeys?.gemini?.isValid !== false
+    );
+    const attemptsCount = user.usage?.attemptsCount || 0;
+    const maxFreeAttempts = user.usage?.maxFreeAttempts || 3;
+    const remainingAttempts = Math.max(0, maxFreeAttempts - attemptsCount);
+    const trialExhausted = !hasPersonalKey && attemptsCount >= maxFreeAttempts;
 
     return res.status(200).json({
       success: true,
@@ -136,6 +153,13 @@ export const loginUser = async (req, res) => {
         email: user.email,
         avatar: user.avatar || '',
         createdAt: user.createdAt,
+      },
+      usage: {
+        attemptsCount,
+        maxFreeAttempts,
+        remainingAttempts,
+        hasPersonalKey,
+        trialExhausted,
       },
       token,
     });
@@ -149,20 +173,37 @@ export const loginUser = async (req, res) => {
 };
 
 /**
- * @desc    Get current authenticated user profile
+ * @desc    Get current authenticated user profile and usage limits
  * @route   GET /api/auth/me
  * @access  Private
  */
 export const getMe = async (req, res) => {
   try {
+    const user = req.user;
+    const hasPersonalKey = Boolean(
+      user.apiKeys?.gemini?.encryptedKey &&
+      user.apiKeys?.gemini?.isValid !== false
+    );
+    const attemptsCount = user.usage?.attemptsCount || 0;
+    const maxFreeAttempts = user.usage?.maxFreeAttempts || 3;
+    const remainingAttempts = Math.max(0, maxFreeAttempts - attemptsCount);
+    const trialExhausted = !hasPersonalKey && attemptsCount >= maxFreeAttempts;
+
     return res.status(200).json({
       success: true,
       user: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        avatar: req.user.avatar || '',
-        createdAt: req.user.createdAt,
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || '',
+        createdAt: user.createdAt,
+      },
+      usage: {
+        attemptsCount,
+        maxFreeAttempts,
+        remainingAttempts,
+        hasPersonalKey,
+        trialExhausted,
       },
     });
   } catch (error) {
@@ -322,7 +363,15 @@ export const updateApiKey = async (req, res) => {
       });
     }
 
-    // 1. Verify that the key is genuine and usable with Google's API
+    // 1. Sanitize and verify key format before network transmission
+    if (cleanKey.length < 20 || cleanKey.length > 120 || !/^[a-zA-Z0-9_\-]+$/.test(cleanKey)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid API key format. Please provide a genuine Google Gemini API key.',
+      });
+    }
+
+    // 2. Verify that the key is genuine and usable with Google's API
     const validation = await validateGeminiKey(cleanKey);
     if (!validation.isValid) {
       return res.status(400).json({
@@ -331,7 +380,7 @@ export const updateApiKey = async (req, res) => {
       });
     }
 
-    // 2. Encrypt the key with AES-256-GCM before database storage
+    // 3. Encrypt the key with AES-256-GCM before database storage
     const encryptedPacket = encryptApiKey(cleanKey);
 
     if (!user.apiKeys) user.apiKeys = {};
@@ -345,6 +394,9 @@ export const updateApiKey = async (req, res) => {
     user.apiKey = ''; // ensure legacy plaintext is cleared
     await user.save();
 
+    const attemptsCount = user.usage?.attemptsCount || 0;
+    const maxFreeAttempts = user.usage?.maxFreeAttempts || 3;
+
     // SECURITY: Never expose raw API key in response
     return res.status(200).json({
       success: true,
@@ -353,6 +405,13 @@ export const updateApiKey = async (req, res) => {
       hasKey: true,
       isValid: true,
       lastValidatedAt: user.apiKeys.gemini.lastValidatedAt,
+      usage: {
+        attemptsCount,
+        maxFreeAttempts,
+        remainingAttempts: Math.max(0, maxFreeAttempts - attemptsCount),
+        hasPersonalKey: true,
+        trialExhausted: false,
+      },
     });
   } catch (error) {
     console.error('[Update API Key Error]:', error.message);
@@ -393,12 +452,23 @@ export const clearApiKey = async (req, res) => {
     user.apiKey = '';
     await user.save();
 
+    const attemptsCount = user.usage?.attemptsCount || 0;
+    const maxFreeAttempts = user.usage?.maxFreeAttempts || 3;
+    const trialExhausted = attemptsCount >= maxFreeAttempts;
+
     return res.status(200).json({
       success: true,
       message: 'Gemini API key removed successfully',
       provider: 'gemini',
       hasKey: false,
       isValid: false,
+      usage: {
+        attemptsCount,
+        maxFreeAttempts,
+        remainingAttempts: Math.max(0, maxFreeAttempts - attemptsCount),
+        hasPersonalKey: false,
+        trialExhausted,
+      },
     });
   } catch (error) {
     console.error('[Clear API Key Error]:', error.message);

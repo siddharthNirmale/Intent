@@ -34,21 +34,20 @@ function sanitizeMessage(message, key) {
  * @returns {Promise<{ isValid: boolean, error?: string, modelCount?: number }>}
  */
 export async function validateGeminiKey(apiKey) {
-  const candidateKey = apiKey || process.env.GEMINI_API_KEY;
-  if (!candidateKey || typeof candidateKey !== 'string') {
+  if (!apiKey || typeof apiKey !== 'string') {
     return {
       isValid: false,
       error: 'Please provide a valid Gemini API key.',
     };
   }
 
-  const cleanKey = candidateKey.trim();
+  const cleanKey = apiKey.trim();
 
-  // Basic length validation (Google AI Studio and Cloud keys are typically 39-55 chars)
-  if (cleanKey.length < 20) {
+  // Format validation: Google API keys are alphanumeric + dashes/underscores (typically 39 chars)
+  if (cleanKey.length < 20 || cleanKey.length > 120 || !/^[a-zA-Z0-9_\-]+$/.test(cleanKey)) {
     return {
       isValid: false,
-      error: 'The provided API key is too short. Please provide a valid Google Gemini API key.',
+      error: 'Invalid API key format. Please provide a valid Google Gemini API key.',
     };
   }
 

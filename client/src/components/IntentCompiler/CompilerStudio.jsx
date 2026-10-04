@@ -5,6 +5,8 @@ import Select from '../ui/Select';
 import PromptBox from '../ui/PromptBox';
 import PromptResultViewer from '../ui/PromptResultViewer';
 import { apiIntent } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { useRouter } from '../../context/RouterContext';
 import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -206,9 +208,14 @@ const FIX_DEFAULTS = {
   ],
 };
 
-export const CompilerStudio = () => {
+export const CompilerStudio = ({ onOpenAuth }) => {
+  const { isAuthenticated, usage, updateUsage } = useAuth();
+  const { navigate } = useRouter();
+
   const [mode, setMode] = useState('build'); // 'build' | 'fix'
   const [prompt, setPrompt] = useState('');
+  const [compileError, setCompileError] = useState(null);
+  const [trialModalOpen, setTrialModalOpen] = useState(false);
 
   // Initial Build Advanced Settings state
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -356,7 +363,21 @@ export const CompilerStudio = () => {
   const handleCompile = async () => {
     if (!prompt.trim()) return;
 
+    // 1. Strict Authentication Check
+    if (!isAuthenticated) {
+      onOpenAuth?.('login');
+      return;
+    }
+
+    // 2. Check if trial quota is already exhausted and user has no personal key
+    if (usage?.trialExhausted && !usage?.hasPersonalKey) {
+      setTrialModalOpen(true);
+      return;
+    }
+
     setLoading(true);
+    setCompileError(null);
+
     try {
       let response;
       if (mode === 'build') {
@@ -404,9 +425,22 @@ export const CompilerStudio = () => {
 
       if (response && response.success && response.data) {
         setResult(response.data);
+        if (response.data.usage) {
+          updateUsage(response.data.usage);
+        }
       }
     } catch (err) {
-      console.error(err);
+      console.error('[Compile Error]:', err.message);
+      if (err.status === 401) {
+        onOpenAuth?.('login');
+      } else if (err.status === 403 && (err.data?.trialExhausted || err.message?.includes('trial'))) {
+        updateUsage({ trialExhausted: true, remainingAttempts: 0 });
+        setTrialModalOpen(true);
+      } else if (err.status === 429) {
+        setCompileError(err.message || 'Rate limit reached. Please wait a moment before sending more requests.');
+      } else {
+        setCompileError(err.message || 'Compilation failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -471,10 +505,33 @@ export const CompilerStudio = () => {
           }
           agentName={activeAgentId}
           providerName="Gemini 3 Flash"
+          statusText={
+            !isAuthenticated
+              ? 'Sign in required'
+              : usage?.hasPersonalKey
+              ? ''
+              : usage?.trialExhausted
+              ? 'Trial limit (3/3)'
+              : `Attempts: ${usage?.attemptsCount ?? 0}/3`
+          }
           submitLabel={mode === 'build' ? 'Compile' : 'Fix'}
           isLoading={loading}
           disabled={loading}
         />
+
+        {/* User-friendly Error Alert */}
+        {compileError && (
+          <div className="flex items-center justify-between text-xs text-red-600 bg-red-50/70 border border-red-100 rounded-xl px-3.5 py-2 animate-in fade-in duration-150">
+            <span>{compileError}</span>
+            <button
+              type="button"
+              onClick={() => setCompileError(null)}
+              className="text-red-400 hover:text-red-700 text-xs ml-2 cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Natural AI Reasoning State Communication */}
         {loading && (
@@ -833,6 +890,46 @@ export const CompilerStudio = () => {
       {/* Output Viewer */}
       {result && (
         <PromptResultViewer result={result} />
+      )}
+
+      {/* Minimal Free Trial Exhausted Notice Dialog */}
+      {trialModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/10 transition-opacity"
+            onClick={() => setTrialModalOpen(false)}
+          />
+          <div className="relative w-full max-w-sm bg-white rounded-2xl p-6 z-10 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="space-y-1.5">
+              <h2 className="text-sm font-semibold text-zinc-950">Free trial completed</h2>
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                You have used all 3 free attempts. Add your free Google Gemini API key in Settings to continue unlimited usage.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setTrialModalOpen(false);
+                  navigate('/settings#settings');
+                }}
+                className="text-xs flex-1"
+              >
+                Open Settings
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTrialModalOpen(false)}
+                className="text-xs text-zinc-500 hover:text-zinc-900"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

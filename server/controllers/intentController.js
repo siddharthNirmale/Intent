@@ -1,4 +1,5 @@
 import IntentTask from '../models/IntentTask.js';
+import User from '../models/User.js';
 import { getDbStatus } from '../config/db.js';
 import agentRegistry from '../services/agents/agentRegistry.js';
 import { compileWithGemini } from '../services/ai/geminiService.js';
@@ -186,24 +187,118 @@ const compileDeveloperIntent = (rawPrompt, targetAgent = 'antigravity', mode = '
 /**
  * @desc    Compile developer prompt into structured agent instructions
  * @route   POST /api/intent/compile
- * @access  Public / Optional Auth
+ * @access  Private (Authentication required)
  */
 export const compileIntent = async (req, res) => {
   try {
+    // 1. Strict Authentication Enforcement
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please sign in to compile prompts.',
+      });
+    }
+
     const { rawPrompt, targetAgent, mode = 'build', rules = [], config = {} } = req.body;
 
-    if (!rawPrompt || rawPrompt.trim().length === 0) {
+    // 2. Strict Input Validation & Sanitization
+    if (!rawPrompt || typeof rawPrompt !== 'string' || rawPrompt.trim().length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Please provide instructions to compile',
       });
     }
 
-    // Resolve target agent from registry
+    if (rawPrompt.length > 20000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Prompt exceeds maximum character length limit (20,000 characters).',
+      });
+    }
+
+    // 3. User Key Resolution & Free Trial Quota Enforcement
+    // Check if user has their own valid, encrypted personal Gemini key configured
+    let activeGeminiKey = '';
+    const hasPersonalKey = Boolean(
+      req.user.apiKeys?.gemini?.encryptedKey &&
+      req.user.apiKeys?.gemini?.isValid !== false
+    );
+
+    let usage = {
+      attemptsCount: req.user.usage?.attemptsCount || 0,
+      maxFreeAttempts: req.user.usage?.maxFreeAttempts || 3,
+      remainingAttempts: 0,
+      hasPersonalKey,
+      trialExhausted: false,
+    };
+
+    if (hasPersonalKey) {
+      // User is using their own personal Gemini key -> Unlimited compiles
+      activeGeminiKey = decryptApiKey(req.user.apiKeys.gemini);
+      usage.remainingAttempts = Math.max(0, usage.maxFreeAttempts - usage.attemptsCount);
+      usage.trialExhausted = false;
+    } else {
+      // User is on the Free Trial (3 free attempts)
+      const maxAttempts = req.user.usage?.maxFreeAttempts || 3;
+      const currentAttempts = req.user.usage?.attemptsCount || 0;
+
+      if (currentAttempts >= maxAttempts) {
+        return res.status(403).json({
+          success: false,
+          trialExhausted: true,
+          message: 'Free trial limit reached (3/3 attempts). Please add your free Google Gemini API key in Settings to continue unlimited usage.',
+          usage: {
+            attemptsCount: currentAttempts,
+            maxFreeAttempts: maxAttempts,
+            remainingAttempts: 0,
+            hasPersonalKey: false,
+            trialExhausted: true,
+          },
+        });
+      }
+
+      // Concurrency-safe atomic attempt increment on the server
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: req.user._id, 'usage.attemptsCount': { $lt: maxAttempts } },
+        { $inc: { 'usage.attemptsCount': 1 } },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        return res.status(403).json({
+          success: false,
+          trialExhausted: true,
+          message: 'Free trial limit reached (3/3 attempts). Please add your free Google Gemini API key in Settings to continue unlimited usage.',
+          usage: {
+            attemptsCount: maxAttempts,
+            maxFreeAttempts: maxAttempts,
+            remainingAttempts: 0,
+            hasPersonalKey: false,
+            trialExhausted: true,
+          },
+        });
+      }
+
+      const newCount = updatedUser.usage.attemptsCount;
+      usage = {
+        attemptsCount: newCount,
+        maxFreeAttempts: maxAttempts,
+        remainingAttempts: Math.max(0, maxAttempts - newCount),
+        hasPersonalKey: false,
+        trialExhausted: newCount >= maxAttempts,
+      };
+
+      // Server-level fallback key provides AI during free trial attempts
+      if (process.env.GEMINI_API_KEY) {
+        activeGeminiKey = process.env.GEMINI_API_KEY.trim();
+      }
+    }
+
+    // 4. Resolve target agent from registry
     const effectiveAgentId = targetAgent || config.platform || (mode === 'fix' ? FIX_DEFAULTS.platform : BUILD_DEFAULTS.platform);
     const agent = agentRegistry.getAgent(effectiveAgentId);
 
-    // Build intelligent, contextual effectiveRules
+    // 5. Build intelligent, contextual effectiveRules
     const effectiveRules = [...(Array.isArray(rules) ? rules : [])];
 
     if (mode === 'build') {
@@ -266,21 +361,10 @@ export const compileIntent = async (req, res) => {
       effectiveRules.push(`[SAFETY GUARDRAILS] Inviolable constraints: ${effectiveSafetyRules.join('; ')}`);
     }
 
-    // Securely resolve active Gemini API key:
-    // 1. Try logged-in user's securely encrypted key in database
-    let activeGeminiKey = '';
-    if (req.user?.apiKeys?.gemini?.encryptedKey) {
-      activeGeminiKey = decryptApiKey(req.user.apiKeys.gemini);
-    }
-    // 2. Try server-level environment fallback key if configured
-    if (!activeGeminiKey && process.env.GEMINI_API_KEY) {
-      activeGeminiKey = process.env.GEMINI_API_KEY.trim();
-    }
-
     let compilation = null;
     let compilationSource = 'rule-engine';
 
-    // If an active key is present, compile with real Gemini AI
+    // 6. If an active key is present, compile with real Gemini AI
     if (activeGeminiKey) {
       try {
         const geminiResult = await compileWithGemini({
@@ -328,11 +412,12 @@ export const compileIntent = async (req, res) => {
       compilationSource = 'rule-engine';
     }
 
+    // 7. Persist task strictly scoped to authenticated user
     let savedTask = null;
     if (getDbStatus()) {
       try {
         savedTask = await IntentTask.create({
-          user: req.user ? req.user._id : null,
+          user: req.user._id,
           rawPrompt: rawPrompt.trim(),
           targetAgent: agent.id,
           compilationSource,
@@ -360,6 +445,7 @@ export const compileIntent = async (req, res) => {
         targetAgent: agent.id,
         targetAgentName: agent.name,
         compilationSource,
+        usage,
         ...compilation,
       },
     });

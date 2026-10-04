@@ -5,9 +5,31 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [usage, setUsage] = useState(null);
   const [token, setToken] = useState(() => getToken());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const refreshUsage = async () => {
+    const storedToken = getToken();
+    if (!storedToken) {
+      setUsage(null);
+      return null;
+    }
+    try {
+      const response = await apiAuth.getMe();
+      if (response.success && response.user) {
+        setUser(response.user);
+        if (response.usage) {
+          setUsage(response.usage);
+        }
+        return response.usage;
+      }
+    } catch {
+      // Quietly ignore network failures on background refresh
+    }
+    return null;
+  };
 
   // Check existing token on initial load
   useEffect(() => {
@@ -22,17 +44,22 @@ export const AuthProvider = ({ children }) => {
         const response = await apiAuth.getMe();
         if (response.success && response.user) {
           setUser(response.user);
+          if (response.usage) {
+            setUsage(response.usage);
+          }
         } else {
           // Token invalid
           localStorage.removeItem('token');
           setToken(null);
           setUser(null);
+          setUsage(null);
         }
       } catch (err) {
         console.warn('Initial session restore failed:', err.message);
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
+        setUsage(null);
       } finally {
         setLoading(false);
       }
@@ -49,6 +76,9 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', response.token);
         setToken(response.token);
         setUser(response.user);
+        if (response.usage) {
+          setUsage(response.usage);
+        }
         return response.user;
       }
     } catch (err) {
@@ -66,6 +96,9 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', response.token);
         setToken(response.token);
         setUser(response.user);
+        if (response.usage) {
+          setUsage(response.usage);
+        }
         return response.user;
       }
     } catch (err) {
@@ -82,6 +115,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       setToken(null);
       setUser(null);
+      setUsage(null);
       setError(null);
     }
   };
@@ -111,11 +145,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUsage = (newUsage) => {
+    if (!newUsage) return;
+    setUsage((prev) => ({ ...(prev || {}), ...newUsage }));
+  };
+
   const clearError = () => setError(null);
 
   const value = {
     user,
     token,
+    usage,
     loading,
     error,
     isAuthenticated: Boolean(user && token),
@@ -123,6 +163,8 @@ export const AuthProvider = ({ children }) => {
     register,
     updateProfile,
     logout,
+    updateUsage,
+    refreshUsage,
     clearError,
   };
 

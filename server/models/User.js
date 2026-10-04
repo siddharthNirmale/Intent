@@ -44,6 +44,17 @@ const userSchema = new mongoose.Schema(
         lastValidatedAt: { type: Date, default: null },
       },
     },
+    usage: {
+      attemptsCount: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      maxFreeAttempts: {
+        type: Number,
+        default: 3,
+      },
+    },
   },
   {
     timestamps: true,
@@ -64,6 +75,14 @@ userSchema.pre('save', async function (next) {
 // Compare entered password with hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Check if user has an active, valid personal Gemini API key configured
+userSchema.methods.hasPersonalKey = function () {
+  return Boolean(
+    this.apiKeys?.gemini?.encryptedKey &&
+    this.apiKeys?.gemini?.isValid !== false
+  );
 };
 
 const User = mongoose.model('User', userSchema);
