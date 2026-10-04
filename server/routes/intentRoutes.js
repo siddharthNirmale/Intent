@@ -1,11 +1,18 @@
 import express from 'express';
-import { compileIntent, getIntentTasks } from '../controllers/intentController.js';
-import protect from '../middleware/authMiddleware.js';
+import {
+  compileIntent,
+  getIntentTasks,
+  getSupportedAgents,
+} from '../controllers/intentController.js';
+import protect, { optionalAuth } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Public / optional auth endpoint to compile intent
-router.post('/compile', compileIntent);
+// Supported AI coding agents
+router.get('/agents', getSupportedAgents);
+
+// Compile intent with optional authentication (to use user's saved Gemini key if logged in)
+router.post('/compile', optionalAuth, compileIntent);
 
 // Protected endpoint to retrieve history
 router.get('/tasks', protect, getIntentTasks);

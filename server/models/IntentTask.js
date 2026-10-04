@@ -22,8 +22,13 @@ const intentTaskSchema = new mongoose.Schema(
     },
     targetAgent: {
       type: String,
-      enum: ['claude-code', 'cursor', 'cline', 'codex', 'gemini-cli', 'generic'],
       default: 'claude-code',
+      trim: true,
+    },
+    compilationSource: {
+      type: String,
+      enum: ['gemini-ai', 'rule-engine'],
+      default: 'rule-engine',
     },
     projectRules: [{ type: String }],
     status: {

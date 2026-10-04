@@ -6,6 +6,7 @@ import {
   updateProfile,
   getApiKey,
   updateApiKey,
+  clearApiKey,
   logoutUser,
 } from '../controllers/authController.js';
 import protect from '../middleware/authMiddleware.js';
@@ -22,5 +23,6 @@ router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.get('/api-key', protect, getApiKey);
 router.put('/api-key', protect, updateApiKey);
+router.delete('/api-key', protect, clearApiKey);
 
 export default router;

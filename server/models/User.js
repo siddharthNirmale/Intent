@@ -35,6 +35,15 @@ const userSchema = new mongoose.Schema(
       default: '',
       select: false,
     },
+    apiKeys: {
+      gemini: {
+        encryptedKey: { type: String, select: false, default: '' },
+        iv: { type: String, select: false, default: '' },
+        authTag: { type: String, select: false, default: '' },
+        isValid: { type: Boolean, default: false },
+        lastValidatedAt: { type: Date, default: null },
+      },
+    },
   },
   {
     timestamps: true,

@@ -6,32 +6,33 @@ const API_BASE = '/api';
 export const getToken = () => localStorage.getItem('token');
 
 /**
- * Helper to get the saved API Key from localStorage
+ * Clean up any legacy API key from localStorage to enforce zero client-side storage
  */
-export const getApiKey = () => localStorage.getItem('intent_api_key') || '';
-
-/**
- * Helper to save or clear the API Key in localStorage
- */
-export const setApiKey = (key) => {
-  if (key && typeof key === 'string' && key.trim()) {
-    localStorage.setItem('intent_api_key', key.trim());
-  } else {
+try {
+  if (typeof window !== 'undefined' && localStorage.getItem('intent_api_key')) {
     localStorage.removeItem('intent_api_key');
   }
-};
+} catch {
+  // Ignore in SSR/restricted environments
+}
 
 /**
- * Centralized fetch wrapper that automatically attaches the JWT token and API key
+ * Legacy stubs preserved for backwards compatibility.
+ * API keys are never stored on the client.
+ */
+export const getApiKey = () => '';
+export const setApiKey = () => {};
+
+/**
+ * Centralized fetch wrapper that automatically attaches the JWT Bearer token
+ * API keys are securely stored, decrypted, and utilized exclusively on the backend.
  */
 async function request(endpoint, options = {}) {
   const token = getToken();
-  const apiKey = getApiKey();
 
   const headers = {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
-    ...(apiKey && { 'x-api-key': apiKey }),
     ...options.headers,
   };
 
@@ -83,15 +84,23 @@ export const apiAuth = {
       body: JSON.stringify(profileData),
     }),
 
+  // Securely retrieve API key status (hasKey, isValid, lastValidatedAt - never returns the raw key)
   getApiKey: () =>
     request('/auth/api-key', {
       method: 'GET',
     }),
 
+  // Validate with Google Gemini and securely save encrypted on backend
   updateApiKey: (apiKey) =>
     request('/auth/api-key', {
       method: 'PUT',
       body: JSON.stringify({ apiKey }),
+    }),
+
+  // Clear API key on backend
+  clearApiKey: () =>
+    request('/auth/api-key', {
+      method: 'DELETE',
     }),
 
   logout: () =>
@@ -110,6 +119,11 @@ export const apiIntent = {
 
   getTasks: () =>
     request('/intent/tasks', {
+      method: 'GET',
+    }),
+
+  getAgents: () =>
+    request('/intent/agents', {
       method: 'GET',
     }),
 };

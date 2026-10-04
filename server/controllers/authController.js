@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
 import { getDbStatus } from '../config/db.js';
+import { encryptApiKey } from '../services/cryptoService.js';
+import { validateGeminiKey } from '../services/ai/geminiService.js';
 
 /**
  * @desc    Register a new user
@@ -227,7 +229,7 @@ export const updateProfile = async (req, res) => {
 };
 
 /**
- * @desc    Get API key status & masked value
+ * @desc    Get API key status (Never exposes raw keys)
  * @route   GET /api/auth/api-key
  * @access  Private
  */
@@ -240,32 +242,37 @@ export const getApiKey = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user._id).select('+apiKey');
+    const user = await User.findById(req.user._id).select(
+      '+apiKeys.gemini.encryptedKey +apiKeys.gemini.isValid +apiKeys.gemini.lastValidatedAt'
+    );
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const key = user.apiKey || '';
-    const hasKey = Boolean(key);
-    const maskedKey = key && key.length > 8 ? `${key.slice(0, 4)}••••••••${key.slice(-4)}` : key ? '••••••••' : '';
+    const geminiConfig = user.apiKeys?.gemini;
+    const hasKey = Boolean(geminiConfig?.encryptedKey || user.apiKey);
+    const isValid = Boolean(geminiConfig?.isValid);
+    const lastValidatedAt = geminiConfig?.lastValidatedAt || null;
 
+    // SECURITY: Never return raw API key in response payload
     return res.status(200).json({
       success: true,
+      provider: 'gemini',
       hasKey,
-      maskedKey,
-      apiKey: key,
+      isValid,
+      lastValidatedAt,
     });
   } catch (error) {
     console.error('[Get API Key Error]:', error.message);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server error retrieving API key',
+      message: 'Server error retrieving API key status',
     });
   }
 };
 
 /**
- * @desc    Update or clear API key
+ * @desc    Validate and securely store Gemini API key
  * @route   PUT /api/auth/api-key
  * @access  Private
  */
@@ -279,31 +286,121 @@ export const updateApiKey = async (req, res) => {
     }
 
     const { apiKey } = req.body;
-    const user = await User.findById(req.user._id);
+    const cleanKey = typeof apiKey === 'string' ? apiKey.trim() : '';
 
+    const user = await User.findById(req.user._id).select(
+      '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag'
+    );
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    user.apiKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+    // If key is empty, clear it
+    if (!cleanKey) {
+      if (!user.apiKeys) user.apiKeys = {};
+      user.apiKeys.gemini = {
+        encryptedKey: '',
+        iv: '',
+        authTag: '',
+        isValid: false,
+        lastValidatedAt: null,
+      };
+      user.apiKey = '';
+      await user.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Gemini API key cleared successfully',
+        provider: 'gemini',
+        hasKey: false,
+        isValid: false,
+        lastValidatedAt: null,
+      });
+    }
+
+    // 1. Verify that the key is genuine and usable with Google's API
+    const validation = await validateGeminiKey(cleanKey);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: validation.error || 'Gemini API key verification failed. Please check your key.',
+      });
+    }
+
+    // 2. Encrypt the key with AES-256-GCM before database storage
+    const encryptedPacket = encryptApiKey(cleanKey);
+
+    if (!user.apiKeys) user.apiKeys = {};
+    user.apiKeys.gemini = {
+      encryptedKey: encryptedPacket.encrypted,
+      iv: encryptedPacket.iv,
+      authTag: encryptedPacket.authTag,
+      isValid: true,
+      lastValidatedAt: new Date(),
+    };
+    user.apiKey = ''; // ensure legacy plaintext is cleared
     await user.save();
 
-    const key = user.apiKey || '';
-    const hasKey = Boolean(key);
-    const maskedKey = key && key.length > 8 ? `${key.slice(0, 4)}••••••••${key.slice(-4)}` : key ? '••••••••' : '';
-
+    // SECURITY: Never expose raw API key in response
     return res.status(200).json({
       success: true,
-      message: hasKey ? 'API key updated successfully' : 'API key cleared',
-      hasKey,
-      maskedKey,
-      apiKey: key,
+      message: 'Gemini API key verified and securely encrypted',
+      provider: 'gemini',
+      hasKey: true,
+      isValid: true,
+      lastValidatedAt: user.apiKeys.gemini.lastValidatedAt,
     });
   } catch (error) {
     console.error('[Update API Key Error]:', error.message);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server error updating API key',
+      message: 'Server error saving API key',
+    });
+  }
+};
+
+/**
+ * @desc    Clear Gemini API key
+ * @route   DELETE /api/auth/api-key
+ * @access  Private
+ */
+export const clearApiKey = async (req, res) => {
+  try {
+    if (!getDbStatus()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is currently offline.',
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (!user.apiKeys) user.apiKeys = {};
+    user.apiKeys.gemini = {
+      encryptedKey: '',
+      iv: '',
+      authTag: '',
+      isValid: false,
+      lastValidatedAt: null,
+    };
+    user.apiKey = '';
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Gemini API key removed successfully',
+      provider: 'gemini',
+      hasKey: false,
+      isValid: false,
+    });
+  } catch (error) {
+    console.error('[Clear API Key Error]:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error removing API key',
     });
   }
 };

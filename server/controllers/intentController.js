@@ -1,5 +1,8 @@
 import IntentTask from '../models/IntentTask.js';
 import { getDbStatus } from '../config/db.js';
+import agentRegistry from '../services/agents/agentRegistry.js';
+import { compileWithGemini } from '../services/ai/geminiService.js';
+import { decryptApiKey } from '../services/cryptoService.js';
 
 // Predefined System Defaults for Initial Build Advanced Settings
 export const BUILD_DEFAULTS = {
@@ -102,23 +105,15 @@ const compileDeveloperIntent = (rawPrompt, targetAgent = 'claude-code', mode = '
       verifyStep,
     ];
 
-    compiledAgentPrompt = `### AGENT TARGET: [${targetAgent.toUpperCase()}]
-### WORKFLOW: COMMAND FIX
-### OBJECTIVE
-${primaryIntent}
-
-### ERROR / ISSUE SPECIFICATION
-${rawPrompt}
-
-### CONSTRAINTS & GUARDRAILS
-${projectRules.map((r) => `- ${r}`).join('\n')}
-
-### DIRECTIVES
-1. [Diagnose] Trace the exact failure origin in target files without unnecessary refactoring.
-2. [Fix] Apply the correction adhering strictly to the defined strategy and guardrails.
-3. [Verify] ${isManualVerification ? 'Verify manually via explicit reproduction steps.' : 'Test the fixed command or flow to verify it exits with status 0.'}
-`;
-
+    const agent = typeof targetAgent === 'string' ? agentRegistry.getAgent(targetAgent) : targetAgent;
+    compiledAgentPrompt = agent.formatPrompt({
+      mode,
+      primaryIntent,
+      rawPrompt,
+      projectRules,
+      structuredPlan,
+      config,
+    });
   } else {
     // Initial Build Mode
     primaryIntent = 'Scaffold and implement feature from scratch';
@@ -165,22 +160,15 @@ ${projectRules.map((r) => `- ${r}`).join('\n')}
       },
     ];
 
-    compiledAgentPrompt = `### AGENT TARGET: [${targetAgent.toUpperCase()}]
-### WORKFLOW: INITIAL BUILD
-### GOAL
-${primaryIntent}
-
-### SPECIFICATION
-${rawPrompt}
-
-### ARCHITECTURAL RULES
-${projectRules.map((r) => `- ${r}`).join('\n')}
-
-### EXECUTION BLUEPRINT
-1. [Scaffold] Configure files and data models adhering to project structure.
-2. [Implement] Write clean, beginner-friendly JavaScript with no unnecessary layers.
-3. [Verify] Validate feature correctness with real test requests.
-`;
+    const agent = typeof targetAgent === 'string' ? agentRegistry.getAgent(targetAgent) : targetAgent;
+    compiledAgentPrompt = agent.formatPrompt({
+      mode,
+      primaryIntent,
+      rawPrompt,
+      projectRules,
+      structuredPlan,
+      config,
+    });
   }
 
   return {
@@ -275,7 +263,65 @@ export const compileIntent = async (req, res) => {
     }
 
     const effectiveAgent = targetAgent || config.platform || (mode === 'fix' ? FIX_DEFAULTS.platform : BUILD_DEFAULTS.platform);
-    const compilation = compileDeveloperIntent(rawPrompt, effectiveAgent, mode, effectiveRules, config);
+    const agent = agentRegistry.getAgent(effectiveAgent);
+
+    // Securely resolve active Gemini API key:
+    // 1. Try logged-in user's securely encrypted key in database
+    let activeGeminiKey = '';
+    if (req.user?.apiKeys?.gemini?.encryptedKey) {
+      activeGeminiKey = decryptApiKey(req.user.apiKeys.gemini);
+    }
+    // 2. Try server-level environment fallback key if configured
+    if (!activeGeminiKey && process.env.GEMINI_API_KEY) {
+      activeGeminiKey = process.env.GEMINI_API_KEY.trim();
+    }
+
+    let compilation = null;
+    let compilationSource = 'rule-engine';
+
+    // If an active key is present, compile with real Gemini AI
+    if (activeGeminiKey) {
+      try {
+        const geminiResult = await compileWithGemini({
+          apiKey: activeGeminiKey,
+          rawPrompt,
+          targetAgent: agent.id,
+          mode,
+          rules: effectiveRules,
+          config,
+        });
+
+        // Format agent-specific prompt using the extensible agent
+        const compiledAgentPrompt = agent.formatPrompt({
+          mode,
+          primaryIntent: geminiResult.primaryIntent,
+          rawPrompt,
+          projectRules: effectiveRules,
+          structuredPlan: geminiResult.structuredPlan,
+          config,
+        });
+
+        compilation = {
+          mode,
+          primaryIntent: geminiResult.primaryIntent,
+          detectedAmbiguities: geminiResult.detectedAmbiguities,
+          detectedContradictions: geminiResult.detectedContradictions,
+          confidenceScore: geminiResult.confidenceScore,
+          structuredPlan: geminiResult.structuredPlan,
+          compiledAgentPrompt,
+        };
+        compilationSource = 'gemini-ai';
+      } catch (geminiError) {
+        // Safe logging - never log keys
+        console.warn('[Compile Intent] Gemini AI compilation unavailable, falling back to deterministic compiler.');
+      }
+    }
+
+    // Gracefully fall back to deterministic compiler if Gemini wasn't used or failed
+    if (!compilation) {
+      compilation = compileDeveloperIntent(rawPrompt, agent, mode, effectiveRules, config);
+      compilationSource = 'rule-engine';
+    }
 
     let savedTask = null;
     if (getDbStatus()) {
@@ -283,12 +329,14 @@ export const compileIntent = async (req, res) => {
         savedTask = await IntentTask.create({
           user: req.user ? req.user._id : null,
           rawPrompt: rawPrompt.trim(),
-          targetAgent: targetAgent || 'claude-code',
-          projectRules: compilation.projectRules || [],
+          targetAgent: agent.id,
+          compilationSource,
+          projectRules: compilation.projectRules || effectiveRules || [],
           analysis: {
             primaryIntent: compilation.primaryIntent,
             detectedAmbiguities: compilation.detectedAmbiguities,
             detectedContradictions: compilation.detectedContradictions,
+            confidenceScore: compilation.confidenceScore || 0.95,
           },
           structuredPlan: compilation.structuredPlan,
           compiledAgentPrompt: compilation.compiledAgentPrompt,
@@ -303,7 +351,8 @@ export const compileIntent = async (req, res) => {
       data: {
         id: savedTask ? savedTask._id : 'ephemeral-' + Date.now(),
         rawPrompt,
-        targetAgent: targetAgent || 'claude-code',
+        targetAgent: agent.id,
+        compilationSource,
         ...compilation,
       },
     });
@@ -314,6 +363,18 @@ export const compileIntent = async (req, res) => {
       message: 'Failed to compile intent. Please try again.',
     });
   }
+};
+
+/**
+ * @desc    Get list of supported AI agents
+ * @route   GET /api/intent/agents
+ * @access  Public
+ */
+export const getSupportedAgents = async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: agentRegistry.listAgents(),
+  });
 };
 
 /**

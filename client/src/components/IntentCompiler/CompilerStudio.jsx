@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../ui/Button';
 import Textarea from '../ui/Textarea';
 import Slider from '../ui/Slider';
@@ -242,6 +242,18 @@ export const CompilerStudio = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [platformOptions, setPlatformOptions] = useState(PLATFORM_OPTIONS);
+
+  // Dynamically synchronize supported AI agents from backend registry
+  useEffect(() => {
+    apiIntent.getAgents()
+      .then((res) => {
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          setPlatformOptions(res.data.map((agent) => ({ id: agent.id, label: agent.name })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const activePalette =
     COLOR_PALETTES.find((p) => p.id === selectedPaletteId) || COLOR_PALETTES[0];
@@ -535,7 +547,7 @@ export const CompilerStudio = () => {
                     setPlatform(val);
                     setOverrides((prev) => ({ ...prev, platform: true }));
                   }}
-                  options={PLATFORM_OPTIONS}
+                  options={platformOptions}
                 />
               </div>
             </div>
@@ -753,7 +765,7 @@ export const CompilerStudio = () => {
                     setFixPlatform(val);
                     setFixOverrides((prev) => ({ ...prev, platform: true }));
                   }}
-                  options={PLATFORM_OPTIONS}
+                  options={platformOptions}
                 />
               </div>
 
@@ -864,9 +876,20 @@ export const CompilerStudio = () => {
       {result && (
         <div className="pt-6 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-900">
-              {result.primaryIntent}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-zinc-900">
+                {result.primaryIntent}
+              </span>
+              {result.compilationSource === 'gemini-ai' ? (
+                <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-emerald-600/20">
+                  Gemini AI
+                </span>
+              ) : (
+                <span className="text-[10px] font-medium text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-full">
+                  Compiled Rule Engine
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={handleCopy}

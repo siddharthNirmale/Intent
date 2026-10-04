@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getApiKey, setApiKey, apiAuth } from '../api/client';
+import { apiAuth } from '../api/client';
 import Button from './ui/Button';
 import Input from './ui/Input';
-import { X, Eye, EyeOff, Check, Key, Lock, Upload, RotateCcw } from 'lucide-react';
+import { X, Eye, EyeOff, Upload, RotateCcw } from 'lucide-react';
 
 // Curated sleek, minimal avatar presets (SVG Data URIs for clean visual rendering)
 const AVATAR_PRESETS = [
@@ -53,10 +53,11 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
   const [accountMessage, setAccountMessage] = useState({ text: '', type: '' });
   const fileInputRef = useRef(null);
 
-  // Settings / API Key state
+  // Settings / API Key state (Key is never stored in browser memory/storage)
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [currentApiKey, setCurrentApiKey] = useState('');
+  const [hasKey, setHasKey] = useState(false);
+  const [isKeyValid, setIsKeyValid] = useState(false);
   const [keyLoading, setKeyLoading] = useState(false);
   const [keyMessage, setKeyMessage] = useState({ text: '', type: '' });
 
@@ -69,19 +70,14 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
       setCustomUrl(user?.avatar && !user.avatar.startsWith('data:image/svg+xml') ? user.avatar : '');
       setAccountMessage({ text: '', type: '' });
       setKeyMessage({ text: '', type: '' });
+      setApiKeyInput('');
 
-      // Load API Key
-      const savedKey = getApiKey();
-      setCurrentApiKey(savedKey);
-      setApiKeyInput(savedKey);
-
-      // Check backend for API key if authenticated
+      // Check backend for API key configuration status (secure, masked, never returns raw key)
       apiAuth.getApiKey()
         .then((res) => {
-          if (res?.success && res.apiKey) {
-            setCurrentApiKey(res.apiKey);
-            setApiKeyInput(res.apiKey);
-            setApiKey(res.apiKey);
+          if (res?.success) {
+            setHasKey(Boolean(res.hasKey));
+            setIsKeyValid(Boolean(res.isValid));
           }
         })
         .catch(() => {});
@@ -150,35 +146,36 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
     reader.readAsDataURL(file);
   };
 
-  // Handle API Key Save
+  // Handle API Key Save & Verification
   const handleSaveApiKey = async (e) => {
     e.preventDefault();
-    setKeyLoading(true);
-    setKeyMessage({ text: '', type: '' });
-
     const trimmedKey = apiKeyInput.trim();
+    if (!trimmedKey) {
+      setKeyMessage({ text: 'Please enter a Gemini API key to save & verify', type: 'error' });
+      return;
+    }
+
+    setKeyLoading(true);
+    setKeyMessage({ text: 'Verifying key with Google Gemini API...', type: 'info' });
 
     try {
-      // Save locally
-      setApiKey(trimmedKey);
-      setCurrentApiKey(trimmedKey);
-
-      // Save to backend if online
-      try {
-        await apiAuth.updateApiKey(trimmedKey);
-      } catch (backendErr) {
-        console.warn('Backend API key sync skipped:', backendErr.message);
+      const res = await apiAuth.updateApiKey(trimmedKey);
+      if (res?.success) {
+        setHasKey(true);
+        setIsKeyValid(true);
+        setApiKeyInput(''); // Never retain raw plaintext in memory
+        setKeyMessage({
+          text: 'Gemini API key verified & encrypted on backend',
+          type: 'success',
+        });
+      } else {
+        throw new Error(res?.message || 'Verification failed');
       }
-
-      setKeyMessage({
-        text: trimmedKey ? 'API key saved securely' : 'API key cleared',
-        type: 'success',
-      });
       setTimeout(() => {
         setKeyMessage({ text: '', type: '' });
-      }, 3000);
+      }, 4000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Failed to save API key', type: 'error' });
+      setKeyMessage({ text: err.message || 'Failed to verify key', type: 'error' });
     } finally {
       setKeyLoading(false);
     }
@@ -186,24 +183,20 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
 
   // Handle Clear Key
   const handleClearApiKey = async () => {
-    setApiKeyInput('');
     setKeyLoading(true);
     setKeyMessage({ text: '', type: '' });
 
     try {
-      setApiKey('');
-      setCurrentApiKey('');
-      try {
-        await apiAuth.updateApiKey('');
-      } catch (backendErr) {
-        console.warn('Backend API key clear skipped:', backendErr.message);
-      }
-      setKeyMessage({ text: 'API key cleared', type: 'success' });
+      await apiAuth.clearApiKey();
+      setHasKey(false);
+      setIsKeyValid(false);
+      setApiKeyInput('');
+      setKeyMessage({ text: 'Gemini API key removed', type: 'success' });
       setTimeout(() => {
         setKeyMessage({ text: '', type: '' });
       }, 3000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Failed to clear key', type: 'error' });
+      setKeyMessage({ text: err.message || 'Failed to remove key', type: 'error' });
     } finally {
       setKeyLoading(false);
     }
@@ -428,77 +421,66 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
           </form>
         )}
 
-        {/* TAB 2: SETTINGS (API KEY) */}
+        {/* TAB 2: SETTINGS (GEMINI API KEY) */}
         {activeTab === 'settings' && (
-          <form onSubmit={handleSaveApiKey} className="space-y-4">
-            {/* Header info */}
-            <div>
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-semibold text-zinc-900">API Key</h4>
-                <span
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
-                    currentApiKey
-                      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/10'
-                      : 'bg-zinc-100 text-zinc-500'
-                  }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      currentApiKey ? 'bg-emerald-500' : 'bg-zinc-400'
-                    }`}
-                  />
-                  {currentApiKey ? 'Configured' : 'Not configured'}
-                </span>
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">
-                Enter your personal API key to securely run compiler and agent operations.
-              </p>
-            </div>
-
-            {/* API Key Input */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-zinc-600">
-                Key Secret
+          <form onSubmit={handleSaveApiKey} className="space-y-3.5 pt-0.5">
+            {/* 1. Header & Status */}
+            <div className="flex items-center justify-between">
+              <label htmlFor="gemini-key" className="text-xs font-semibold text-zinc-900">
+                Gemini API Key
               </label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  placeholder="sk-ant-... or api key"
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  className="w-full h-10 pl-3 pr-10 text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg transition-colors outline-none focus:bg-zinc-100 focus:ring-1 focus:ring-zinc-400 font-mono"
-                  autoComplete="off"
-                  spellCheck="false"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 p-1 rounded transition-colors cursor-pointer"
-                  title={showApiKey ? 'Hide key' : 'Show key'}
-                >
-                  {showApiKey ? (
-                    <EyeOff className="w-3.5 h-3.5" />
-                  ) : (
-                    <Eye className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </div>
+              {hasKey && (
+                <span className="text-[11px] font-medium text-emerald-600 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {isKeyValid ? 'Active & Validated' : 'Configured'}
+                </span>
+              )}
             </div>
 
-            {/* Privacy & Security Notice */}
-            <div className="p-3 bg-zinc-50 rounded-xl flex items-start gap-2.5">
-              <Lock className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] leading-relaxed text-zinc-500">
-                Your key is stored securely in your browser and sent with compiler requests. It is never logged or exposed.
+            {/* 2. Key Input */}
+            <div className="relative">
+              <input
+                id="gemini-key"
+                type={showApiKey ? 'text' : 'password'}
+                placeholder={hasKey ? "Key configured • Enter new key to update" : "AIzaSy..."}
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                className="w-full h-9 pl-3 pr-8 text-xs bg-zinc-100/80 text-zinc-950 placeholder:text-zinc-400 rounded-lg outline-none focus:bg-zinc-100 focus:ring-1 focus:ring-zinc-400 font-mono transition-colors"
+                autoComplete="off"
+                spellCheck="false"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 p-1 rounded transition-colors cursor-pointer"
+                title={showApiKey ? 'Hide key' : 'Show key'}
+              >
+                {showApiKey ? (
+                  <EyeOff className="w-3.5 h-3.5" />
+                ) : (
+                  <Eye className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
+
+            {/* 3. Security & Agent Notice */}
+            <div className="space-y-1">
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                Keys are verified with Google Generative AI, encrypted with AES-256-GCM at rest, and never exposed in browser storage.
+              </p>
+              <p className="text-[10px] text-zinc-400">
+                Support for additional AI agents (OpenAI, Claude, DeepSeek) will be available in future releases.
               </p>
             </div>
 
-            {/* Feedback message */}
+            {/* 4. Feedback Message */}
             {keyMessage.text && (
               <p
                 className={`text-xs ${
                   keyMessage.type === 'error'
                     ? 'text-red-600'
+                    : keyMessage.type === 'info'
+                    ? 'text-zinc-600'
                     : 'text-emerald-600'
                 }`}
               >
@@ -506,28 +488,28 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
               </p>
             )}
 
-            {/* Actions */}
-            <div className="pt-2 flex items-center gap-2">
+            {/* 5. Actions */}
+            <div className="flex items-center gap-2 pt-1">
               <Button
                 type="submit"
                 variant="primary"
-                size="md"
-                className="flex-1"
+                size="sm"
+                className="flex-1 text-xs h-8"
                 isLoading={keyLoading}
               >
-                Save API Key
+                {hasKey ? 'Update & Verify' : 'Save & Verify'}
               </Button>
 
-              {currentApiKey && (
+              {hasKey && (
                 <Button
                   type="button"
                   variant="ghost"
-                  size="md"
+                  size="sm"
                   onClick={handleClearApiKey}
-                  className="text-xs text-zinc-500 hover:text-red-600"
+                  className="text-xs h-8 text-zinc-400 hover:text-red-600"
                   disabled={keyLoading}
                 >
-                  Clear
+                  Remove Key
                 </Button>
               )}
             </div>
