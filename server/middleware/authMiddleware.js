@@ -30,7 +30,7 @@ export const protect = async (req, res, next) => {
       }
 
       const user = await User.findById(decoded.id).select(
-        '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag'
+        '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag +apiKeys.gemini.isValid +apiKeys.gemini.lastValidatedAt'
       );
 
       if (!user) {
@@ -73,8 +73,9 @@ export const optionalAuth = async (req, res, next) => {
         const decoded = jwt.verify(token, secret);
 
         if (getDbStatus()) {
-          const user = await User.findById(decoded.id)
-            .select('-password +apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag');
+          const user = await User.findById(decoded.id).select(
+            '+apiKeys.gemini.encryptedKey +apiKeys.gemini.iv +apiKeys.gemini.authTag +apiKeys.gemini.isValid +apiKeys.gemini.lastValidatedAt'
+          );
           if (user) {
             req.user = user;
           }

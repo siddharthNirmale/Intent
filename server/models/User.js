@@ -80,7 +80,7 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 // Check if user has an active, valid personal Gemini API key configured
 userSchema.methods.hasPersonalKey = function () {
   return Boolean(
-    this.apiKeys?.gemini?.encryptedKey &&
+    (this.apiKeys?.gemini?.encryptedKey || this.apiKey) &&
     this.apiKeys?.gemini?.isValid !== false
   );
 };

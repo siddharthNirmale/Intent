@@ -20,7 +20,7 @@ function getDerivedKey() {
  */
 export function encryptApiKey(plaintext) {
   if (!plaintext || typeof plaintext !== 'string') {
-    return { encrypted: '', iv: '', authTag: '' };
+    return { encrypted: '', encryptedKey: '', iv: '', authTag: '' };
   }
 
   const key = getDerivedKey();
@@ -34,6 +34,7 @@ export function encryptApiKey(plaintext) {
 
   return {
     encrypted,
+    encryptedKey: encrypted,
     iv: iv.toString('hex'),
     authTag,
   };
@@ -41,10 +42,19 @@ export function encryptApiKey(plaintext) {
 
 /**
  * Decrypts an AES-256-GCM encrypted packet back to plaintext.
- * @param {{ encrypted: string, iv: string, authTag: string }} packet
+ * Accepts both { encrypted, iv, authTag } and { encryptedKey, iv, authTag }.
+ * @param {{ encrypted?: string, encryptedKey?: string, iv: string, authTag: string }} packet
  * @returns {string} Decrypted plaintext string, or empty string on failure
  */
-export function decryptApiKey({ encrypted, iv, authTag }) {
+export function decryptApiKey(packet = {}) {
+  if (!packet || typeof packet !== 'object') {
+    return '';
+  }
+
+  const encrypted = packet.encrypted || packet.encryptedKey;
+  const iv = packet.iv;
+  const authTag = packet.authTag;
+
   if (!encrypted || !iv || !authTag) {
     return '';
   }

@@ -160,7 +160,7 @@ export const compileIntent = async (req, res) => {
     // Check if user has their own valid, encrypted personal Gemini key configured
     let activeGeminiKey = '';
     const hasPersonalKey = Boolean(
-      req.user.apiKeys?.gemini?.encryptedKey &&
+      (req.user.apiKeys?.gemini?.encryptedKey || req.user.apiKey) &&
       req.user.apiKeys?.gemini?.isValid !== false
     );
 
@@ -174,7 +174,19 @@ export const compileIntent = async (req, res) => {
 
     if (hasPersonalKey) {
       // User is using their own personal Gemini key -> Unlimited compiles
-      activeGeminiKey = decryptApiKey(req.user.apiKeys.gemini);
+      if (req.user.apiKeys?.gemini?.encryptedKey) {
+        activeGeminiKey = decryptApiKey(req.user.apiKeys.gemini);
+      } else if (req.user.apiKey) {
+        activeGeminiKey = req.user.apiKey.trim();
+      }
+
+      if (!activeGeminiKey) {
+        return res.status(400).json({
+          success: false,
+          message: 'Unable to decrypt your saved personal Gemini API key. Please re-enter your key in Settings.',
+        });
+      }
+
       usage.remainingAttempts = Math.max(0, usage.maxFreeAttempts - usage.attemptsCount);
       usage.trialExhausted = false;
     } else {
