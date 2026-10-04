@@ -147,7 +147,7 @@ const CURATED_LIBRARIES = [
   'NextAuth / Auth.js',
 ];
 
-// Predefined system defaults
+// Predefined system defaults for Initial Build
 const SYSTEM_DEFAULTS = {
   techStack: 'MERN Stack (React, Express, MongoDB)',
   platform: 'claude-code',
@@ -156,11 +156,55 @@ const SYSTEM_DEFAULTS = {
   selectedLibraries: ['Tailwind CSS', 'JWT'],
 };
 
+// Command Fix Advanced Options
+const FIX_STRATEGY_OPTIONS = [
+  { id: 'surgical', label: 'Surgical Patch (Minimal changes, zero refactor)' },
+  { id: 'root-cause', label: 'Root-Cause Fix (Eliminate underlying debt)' },
+  { id: 'defensive', label: 'Defensive Guard (Add validation & error bounds)' },
+  { id: 'diagnostic', label: 'Diagnostic Trace (Inject debug logging first)' },
+];
+
+const ISSUE_DOMAIN_OPTIONS = [
+  { id: 'auto', label: 'Auto-Detect (Infer from error text)' },
+  { id: 'backend', label: 'Backend & API (Node.js, Express, Middleware)' },
+  { id: 'frontend', label: 'Frontend & UI (React, Vite, State, DOM)' },
+  { id: 'database', label: 'Database & Storage (MongoDB, Mongoose, SQL)' },
+  { id: 'lifecycle', label: 'Process & Ports (EADDRINUSE, kill, sockets)' },
+  { id: 'build', label: 'Build & Bundler (npm, Vite, ESM, imports)' },
+];
+
+const VERIFICATION_OPTIONS = [
+  { id: 'automated', label: 'Automated Command (Run command & check exit 0)' },
+  { id: 'manual', label: 'Manual Steps (Step-by-step reproduction check)' },
+  { id: 'inspection', label: 'Code Inspection (Syntax & logic review only)' },
+];
+
+const CURATED_SAFETY_RULES = [
+  'Preserve existing API signatures',
+  'Do not touch package.json dependencies',
+  'Preserve working code & file structure',
+  'Zero external network calls during fix',
+  'Add regression unit test',
+];
+
+// Predefined system defaults for Command Fix
+const FIX_DEFAULTS = {
+  platform: 'claude-code',
+  fixStrategy: 'Surgical Patch (Minimal changes, zero refactor)',
+  issueDomain: 'Auto-Detect (Infer from error text)',
+  verification: 'Automated Command (Run command & check exit 0)',
+  safetyRules: [
+    'Preserve existing API signatures',
+    'Do not touch package.json dependencies',
+    'Preserve working code & file structure',
+  ],
+};
+
 export const CompilerStudio = () => {
   const [mode, setMode] = useState('build'); // 'build' | 'fix'
   const [prompt, setPrompt] = useState('');
 
-  // Advanced settings state initialized to predefined defaults
+  // Initial Build Advanced Settings state initialized to predefined defaults
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [techStack, setTechStack] = useState(SYSTEM_DEFAULTS.techStack);
   const [platform, setPlatform] = useState(SYSTEM_DEFAULTS.platform);
@@ -169,13 +213,30 @@ export const CompilerStudio = () => {
   const [selectedLibraries, setSelectedLibraries] = useState([...SYSTEM_DEFAULTS.selectedLibraries]);
   const [libSearch, setLibSearch] = useState('');
 
-  // Track explicit user overrides
+  // Track explicit user overrides for Initial Build
   const [overrides, setOverrides] = useState({
     techStack: false,
     platform: false,
     temperature: false,
     colorPalette: false,
     libraries: false,
+  });
+
+  // Command Fix Advanced Settings state initialized to predefined defaults
+  const [showFixAdvanced, setShowFixAdvanced] = useState(false);
+  const [fixPlatform, setFixPlatform] = useState(FIX_DEFAULTS.platform);
+  const [fixStrategy, setFixStrategy] = useState(FIX_DEFAULTS.fixStrategy);
+  const [issueDomain, setIssueDomain] = useState(FIX_DEFAULTS.issueDomain);
+  const [verification, setVerification] = useState(FIX_DEFAULTS.verification);
+  const [safetyRules, setSafetyRules] = useState([...FIX_DEFAULTS.safetyRules]);
+
+  // Track explicit user overrides for Command Fix
+  const [fixOverrides, setFixOverrides] = useState({
+    platform: false,
+    fixStrategy: false,
+    issueDomain: false,
+    verification: false,
+    safetyRules: false,
   });
 
   const [loading, setLoading] = useState(false);
@@ -186,6 +247,7 @@ export const CompilerStudio = () => {
     COLOR_PALETTES.find((p) => p.id === selectedPaletteId) || COLOR_PALETTES[0];
 
   const hasCustomOverrides = Object.values(overrides).some(Boolean);
+  const hasCustomFixOverrides = Object.values(fixOverrides).some(Boolean);
 
   const handleResetDefaults = () => {
     setTechStack(SYSTEM_DEFAULTS.techStack);
@@ -200,6 +262,30 @@ export const CompilerStudio = () => {
       colorPalette: false,
       libraries: false,
     });
+  };
+
+  const handleResetFixDefaults = () => {
+    setFixPlatform(FIX_DEFAULTS.platform);
+    setFixStrategy(FIX_DEFAULTS.fixStrategy);
+    setIssueDomain(FIX_DEFAULTS.issueDomain);
+    setVerification(FIX_DEFAULTS.verification);
+    setSafetyRules([...FIX_DEFAULTS.safetyRules]);
+    setFixOverrides({
+      platform: false,
+      fixStrategy: false,
+      issueDomain: false,
+      verification: false,
+      safetyRules: false,
+    });
+  };
+
+  const toggleSafetyRule = (rule) => {
+    setFixOverrides((prev) => ({ ...prev, safetyRules: true }));
+    if (safetyRules.includes(rule)) {
+      setSafetyRules(safetyRules.filter((r) => r !== rule));
+    } else {
+      setSafetyRules([...safetyRules, rule]);
+    }
   };
 
   const toggleLibrary = (lib) => {
@@ -235,21 +321,38 @@ export const CompilerStudio = () => {
 
     setLoading(true);
     try {
-      const dynamicConfig = {};
-      if (overrides.techStack) dynamicConfig.techStack = techStack;
-      if (overrides.platform) dynamicConfig.platform = platform;
-      if (overrides.temperature) dynamicConfig.temperature = `${temperature} (${getTemperatureLabel(temperature)})`;
-      if (overrides.colorPalette) dynamicConfig.colorPalette = `${activePalette.name} (Background: ${activePalette.bg}, Surface: ${activePalette.surface}, Accent: ${activePalette.accent})`;
-      if (overrides.libraries) dynamicConfig.libraries = selectedLibraries;
+      let response;
+      if (mode === 'build') {
+        const dynamicConfig = {};
+        if (overrides.techStack) dynamicConfig.techStack = techStack;
+        if (overrides.platform) dynamicConfig.platform = platform;
+        if (overrides.temperature) dynamicConfig.temperature = `${temperature} (${getTemperatureLabel(temperature)})`;
+        if (overrides.colorPalette) dynamicConfig.colorPalette = `${activePalette.name} (Background: ${activePalette.bg}, Surface: ${activePalette.surface}, Accent: ${activePalette.accent})`;
+        if (overrides.libraries) dynamicConfig.libraries = selectedLibraries;
 
-      const response = await apiIntent.compile({
-        rawPrompt: prompt,
-        targetAgent: platform,
-        mode,
-        config: mode === 'build' ? dynamicConfig : undefined,
-      });
+        response = await apiIntent.compile({
+          rawPrompt: prompt,
+          targetAgent: platform,
+          mode,
+          config: dynamicConfig,
+        });
+      } else {
+        const dynamicConfig = {};
+        if (fixOverrides.platform) dynamicConfig.platform = fixPlatform;
+        if (fixOverrides.fixStrategy) dynamicConfig.fixStrategy = fixStrategy;
+        if (fixOverrides.issueDomain) dynamicConfig.issueDomain = issueDomain;
+        if (fixOverrides.verification) dynamicConfig.verification = verification;
+        if (fixOverrides.safetyRules) dynamicConfig.safetyRules = safetyRules;
 
-      if (response.success && response.data) {
+        response = await apiIntent.compile({
+          rawPrompt: prompt,
+          targetAgent: fixPlatform,
+          mode,
+          config: dynamicConfig,
+        });
+      }
+
+      if (response && response.success && response.data) {
         setResult(response.data);
       }
     } catch (err) {
@@ -353,13 +456,32 @@ export const CompilerStudio = () => {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2 w-44">
-              <span className="text-xs text-zinc-400 shrink-0">Platform:</span>
-              <Select
-                value={platform}
-                onChange={(val) => setPlatform(val)}
-                options={PLATFORM_OPTIONS}
-              />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowFixAdvanced(!showFixAdvanced)}
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors cursor-pointer"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Advanced</span>
+                {showFixAdvanced ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+                )}
+              </button>
+
+              {hasCustomFixOverrides && showFixAdvanced && (
+                <button
+                  type="button"
+                  onClick={handleResetFixDefaults}
+                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-1 rounded cursor-pointer"
+                  title="Reset to system defaults"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset defaults</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -605,6 +727,134 @@ export const CompilerStudio = () => {
                       className="px-2 py-0.5 rounded text-[11px] bg-white text-zinc-600 hover:text-zinc-950 transition-colors cursor-pointer"
                     >
                       + {lib}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= OPTIONAL COMMAND FIX ADVANCED SECTION ================= */}
+        {mode === 'fix' && showFixAdvanced && (
+          <div className="mt-3 p-5 bg-zinc-50/80 rounded-2xl space-y-5 animate-in fade-in duration-150">
+            {/* 1. Target Platform & Fix Strategy */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Target Platform */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">
+                    Target Platform
+                  </span>
+                  {!fixOverrides.platform && (
+                    <span className="text-[10px] text-zinc-400">Default</span>
+                  )}
+                </div>
+                <Select
+                  value={fixPlatform}
+                  onChange={(val) => {
+                    setFixPlatform(val);
+                    setFixOverrides((prev) => ({ ...prev, platform: true }));
+                  }}
+                  options={PLATFORM_OPTIONS}
+                />
+              </div>
+
+              {/* Fix Strategy */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">
+                    Fix Strategy
+                  </span>
+                  {!fixOverrides.fixStrategy && (
+                    <span className="text-[10px] text-zinc-400">Default</span>
+                  )}
+                </div>
+                <Select
+                  value={fixStrategy}
+                  onChange={(val) => {
+                    setFixStrategy(val);
+                    setFixOverrides((prev) => ({ ...prev, fixStrategy: true }));
+                  }}
+                  options={FIX_STRATEGY_OPTIONS}
+                />
+              </div>
+            </div>
+
+            {/* 2. Issue Domain & Verification Method */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Issue Domain */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">
+                    Issue Domain
+                  </span>
+                  {!fixOverrides.issueDomain && (
+                    <span className="text-[10px] text-zinc-400">Default</span>
+                  )}
+                </div>
+                <Select
+                  value={issueDomain}
+                  onChange={(val) => {
+                    setIssueDomain(val);
+                    setFixOverrides((prev) => ({ ...prev, issueDomain: true }));
+                  }}
+                  options={ISSUE_DOMAIN_OPTIONS}
+                />
+              </div>
+
+              {/* Verification Method */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">
+                    Verification Method
+                  </span>
+                  {!fixOverrides.verification && (
+                    <span className="text-[10px] text-zinc-400">Default</span>
+                  )}
+                </div>
+                <Select
+                  value={verification}
+                  onChange={(val) => {
+                    setVerification(val);
+                    setFixOverrides((prev) => ({ ...prev, verification: true }));
+                  }}
+                  options={VERIFICATION_OPTIONS}
+                />
+              </div>
+            </div>
+
+            {/* 3. Safety & Preservation Guardrails */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-500">
+                  Preservation & Safety Guardrails
+                </span>
+                {!fixOverrides.safetyRules ? (
+                  <span className="text-[10px] text-zinc-400">Default: 3 active</span>
+                ) : (
+                  <span className="text-[10px] text-zinc-700 font-medium">
+                    {safetyRules.length} active
+                  </span>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {CURATED_SAFETY_RULES.map((rule) => {
+                  const isActive = safetyRules.includes(rule);
+                  return (
+                    <button
+                      key={rule}
+                      type="button"
+                      onClick={() => toggleSafetyRule(rule)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-zinc-900 text-white font-medium shadow-xs'
+                          : 'bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
+                      }`}
+                    >
+                      {isActive && <Check className="w-3 h-3 text-white" />}
+                      <span>{rule}</span>
                     </button>
                   );
                 })}

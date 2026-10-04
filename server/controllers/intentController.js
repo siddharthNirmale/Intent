@@ -1,13 +1,35 @@
 import IntentTask from '../models/IntentTask.js';
 import { getDbStatus } from '../config/db.js';
 
+// Predefined System Defaults for Initial Build Advanced Settings
+export const BUILD_DEFAULTS = {
+  techStack: 'MERN Stack (React, Express, MongoDB)',
+  platform: 'claude-code',
+  temperature: '0.2 (Precise)',
+  colorPalette: 'Minimal White-First',
+  libraries: ['Tailwind CSS', 'JWT'],
+};
+
+// Predefined System Defaults for Command Fix Advanced Settings
+export const FIX_DEFAULTS = {
+  platform: 'claude-code',
+  fixStrategy: 'Surgical Patch (Minimal changes, zero refactor)',
+  issueDomain: 'Auto-Detect (Infer from error text)',
+  verification: 'Automated Command (Run command & check exit 0)',
+  safetyRules: [
+    'Preserve existing API signatures',
+    'Do not touch package.json dependencies',
+    'Preserve working code & file structure',
+  ],
+};
+
 /**
  * Helper to analyze developer input and compile into a structured agent prompt
  * Supports both:
  * 1. 'build' — Initial Build: complete implementation prompt from scratch
  * 2. 'fix' — Command Fix: analyze issue/error and generate precise fix prompt
  */
-const compileDeveloperIntent = (rawPrompt, targetAgent = 'claude-code', mode = 'build', rules = []) => {
+const compileDeveloperIntent = (rawPrompt, targetAgent = 'claude-code', mode = 'build', rules = [], config = {}) => {
   const promptLower = rawPrompt.toLowerCase();
   const isFix = mode === 'fix';
 
@@ -36,12 +58,31 @@ const compileDeveloperIntent = (rawPrompt, targetAgent = 'claude-code', mode = '
       detectedAmbiguities.push('Expected outcome inferred from standard framework behavior.');
     }
 
-    const projectRules = [
-      'Apply minimal surgical changes — do not rewrite working code',
-      'Follow existing project conventions and file structure',
-      'Validate fix immediately to ensure no regressions',
-      ...rules,
+    const fixStrategy = config.fixStrategy || FIX_DEFAULTS.fixStrategy;
+    const verification = config.verification || FIX_DEFAULTS.verification;
+    const isManualVerification = verification.toLowerCase().includes('manual');
+
+    const projectRules = rules.length > 0 ? rules : [
+      `Fix Strategy: ${fixStrategy}`,
+      `Verification: ${verification}`,
+      ...FIX_DEFAULTS.safetyRules.map((r) => `Constraint: ${r}`),
     ];
+
+    const verifyStep = isManualVerification
+      ? {
+          stepNumber: 3,
+          title: 'Manual Verification',
+          targetFiles: ['reproduction steps'],
+          instructions: 'Follow explicit step-by-step reproduction instructions to verify fix manually.',
+          verificationCriteria: 'Manually verified with zero reproduction of issue.',
+        }
+      : {
+          stepNumber: 3,
+          title: 'Regression Verification',
+          targetFiles: ['runtime / tests'],
+          instructions: 'Test the fixed command or flow to verify expected behavior.',
+          verificationCriteria: 'Exits cleanly with expected status 0.',
+        };
 
     structuredPlan = [
       {
@@ -55,16 +96,10 @@ const compileDeveloperIntent = (rawPrompt, targetAgent = 'claude-code', mode = '
         stepNumber: 2,
         title: 'Apply Surgical Fix',
         targetFiles: ['target module'],
-        instructions: 'Make the minimal correction needed. Do not introduce new abstractions.',
+        instructions: `Apply correction adhering strictly to strategy: ${fixStrategy}.`,
         verificationCriteria: 'Error resolved with zero collateral side effects.',
       },
-      {
-        stepNumber: 3,
-        title: 'Regression Verification',
-        targetFiles: ['runtime / tests'],
-        instructions: 'Test the fixed command or flow to verify expected behavior.',
-        verificationCriteria: 'Exits cleanly with expected status.',
-      },
+      verifyStep,
     ];
 
     compiledAgentPrompt = `### AGENT TARGET: [${targetAgent.toUpperCase()}]
@@ -75,13 +110,13 @@ ${primaryIntent}
 ### ERROR / ISSUE SPECIFICATION
 ${rawPrompt}
 
-### CONSTRAINTS
+### CONSTRAINTS & GUARDRAILS
 ${projectRules.map((r) => `- ${r}`).join('\n')}
 
 ### DIRECTIVES
 1. [Diagnose] Trace the exact failure origin in target files without unnecessary refactoring.
-2. [Fix] Apply the minimal, cleanest correction to resolve the issue.
-3. [Verify] Test the fixed command or flow to verify it succeeds cleanly.
+2. [Fix] Apply the correction adhering strictly to the defined strategy and guardrails.
+3. [Verify] ${isManualVerification ? 'Verify manually via explicit reproduction steps.' : 'Test the fixed command or flow to verify it exits with status 0.'}
 `;
 
   } else {
@@ -158,15 +193,6 @@ ${projectRules.map((r) => `- ${r}`).join('\n')}
   };
 };
 
-// Predefined System Defaults for Initial Build Advanced Settings
-const DEFAULTS = {
-  techStack: 'MERN Stack (React, Express, MongoDB)',
-  platform: 'claude-code',
-  temperature: '0.2 (Precise)',
-  colorPalette: 'Minimal White-First',
-  libraries: ['Tailwind CSS', 'JWT'],
-};
-
 /**
  * @desc    Compile developer prompt into structured agent instructions
  * @route   POST /api/intent/compile
@@ -187,13 +213,13 @@ export const compileIntent = async (req, res) => {
 
     if (mode === 'build') {
       // Use user's customized setting if provided; otherwise seamlessly use system defaults
-      const effectiveTechStack = config.techStack || DEFAULTS.techStack;
-      const effectiveTemperature = config.temperature || DEFAULTS.temperature;
-      const effectivePalette = config.colorPalette || DEFAULTS.colorPalette;
+      const effectiveTechStack = config.techStack || BUILD_DEFAULTS.techStack;
+      const effectiveTemperature = config.temperature || BUILD_DEFAULTS.temperature;
+      const effectivePalette = config.colorPalette || BUILD_DEFAULTS.colorPalette;
       const effectiveLibraries =
         Array.isArray(config.libraries) && config.libraries.length > 0
           ? config.libraries
-          : DEFAULTS.libraries;
+          : BUILD_DEFAULTS.libraries;
 
       // Naturally determine project type from the effective tech stack
       let inferredBuildType = config.buildType;
@@ -228,10 +254,28 @@ export const compileIntent = async (req, res) => {
         `Design Palette: ${effectivePalette}`,
         ...(effectiveLibraries.length > 0 ? [`Libraries: ${effectiveLibraries.join(', ')}`] : [])
       );
+    } else if (mode === 'fix') {
+      // Use user's customized setting if provided; otherwise seamlessly use system defaults
+      const effectiveStrategy = config.fixStrategy || FIX_DEFAULTS.fixStrategy;
+      const effectiveDomain = config.issueDomain || FIX_DEFAULTS.issueDomain;
+      const effectiveVerification = config.verification || FIX_DEFAULTS.verification;
+      const effectiveSafetyRules =
+        Array.isArray(config.safetyRules) && config.safetyRules.length > 0
+          ? config.safetyRules
+          : FIX_DEFAULTS.safetyRules;
+
+      effectiveRules.push(
+        `Fix Strategy: ${effectiveStrategy}`,
+        ...(effectiveDomain && !effectiveDomain.toLowerCase().includes('auto-detect')
+          ? [`Issue Domain: ${effectiveDomain}`]
+          : []),
+        `Verification: ${effectiveVerification}`,
+        ...effectiveSafetyRules.map((rule) => `Constraint: ${rule}`)
+      );
     }
 
-    const effectiveAgent = targetAgent || config.platform || DEFAULTS.platform;
-    const compilation = compileDeveloperIntent(rawPrompt, effectiveAgent, mode, effectiveRules);
+    const effectiveAgent = targetAgent || config.platform || (mode === 'fix' ? FIX_DEFAULTS.platform : BUILD_DEFAULTS.platform);
+    const compilation = compileDeveloperIntent(rawPrompt, effectiveAgent, mode, effectiveRules, config);
 
     let savedTask = null;
     if (getDbStatus()) {
