@@ -415,7 +415,7 @@ export const CompilerStudio = () => {
   return (
     <div className="max-w-2xl mx-auto py-10 space-y-6">
       {/* Workflow Mode Switch */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex items-center justify-between">
         <div className="inline-flex items-center gap-1 p-1 bg-zinc-100 rounded-xl select-none">
           <button
             type="button"
@@ -426,7 +426,7 @@ export const CompilerStudio = () => {
             className={cn(
               'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer outline-none',
               mode === 'build'
-                ? 'bg-white text-zinc-950 font-semibold'
+                ? 'bg-white text-zinc-950 shadow-xs'
                 : 'text-zinc-500 hover:text-zinc-900'
             )}
           >
@@ -441,27 +441,20 @@ export const CompilerStudio = () => {
             className={cn(
               'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors cursor-pointer outline-none',
               mode === 'fix'
-                ? 'bg-white text-zinc-950 font-semibold'
+                ? 'bg-white text-zinc-950 shadow-xs'
                 : 'text-zinc-500 hover:text-zinc-900'
             )}
           >
             Command Fix
           </button>
         </div>
-
-        {/* Clean Agent Status */}
-        <div className="flex items-center gap-2 text-xs text-zinc-400 select-none">
-          <span>Target: {activeAgentLabel}</span>
-          <span>•</span>
-          <span>Google Gemini 3</span>
-        </div>
       </div>
 
       {/* Main Heading */}
       <h1 className="text-xl font-medium tracking-tight text-zinc-950">
         {mode === 'build'
-          ? `Compile implementation blueprint for ${activeAgentLabel}.`
-          : `Refine error into surgical fix directives for ${activeAgentLabel}.`}
+          ? `Compile prompt for ${activeAgentLabel}.`
+          : `Compile fix for ${activeAgentLabel}.`}
       </h1>
 
       {/* Clean Workbench */}
@@ -473,46 +466,41 @@ export const CompilerStudio = () => {
           onClear={() => setPrompt('')}
           placeholder={
             mode === 'build'
-              ? 'Enter command or feature requirements to compile...'
-              : 'Paste error message, failing command, or unintended behavior...'
+              ? 'Enter prompt or feature requirements to compile...'
+              : 'Paste error message or failing behavior...'
           }
           agentName={activeAgentId}
           providerName="Gemini 3 Flash"
-          submitLabel={mode === 'build' ? 'Compile Blueprint' : 'Compile Fix'}
+          submitLabel={mode === 'build' ? 'Compile' : 'Fix'}
           isLoading={loading}
           disabled={loading}
         />
 
         {/* Natural AI Reasoning State Communication */}
         {loading && (
-          <div className="bg-zinc-100/80 rounded-xl px-4 py-3 flex items-center justify-between text-xs animate-in fade-in duration-150">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[11px] text-zinc-400">
-                Phase {aiStage} of 3
-              </span>
-              <span className="text-zinc-800 font-medium">
-                {aiStage === 1 && 'Understanding developer intent and context...'}
-                {aiStage === 2 && 'Structuring execution directives and constraints...'}
-                {aiStage === 3 && `Synthesizing deterministic ${activeAgentLabel} blueprint...`}
-              </span>
-            </div>
-            <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline-block">
-              Gemini 3
+          <div className="bg-zinc-100/80 rounded-xl px-4 py-2.5 flex items-center justify-between text-xs text-zinc-600 animate-in fade-in duration-150">
+            <span>
+              {aiStage === 1 && 'Analyzing intent and requirements...'}
+              {aiStage === 2 && 'Structuring execution directives...'}
+              {aiStage === 3 && `Synthesizing command for ${activeAgentLabel}...`}
+            </span>
+            <span className="text-[11px] text-zinc-400 font-mono">
+              Phase {aiStage}/3
             </span>
           </div>
         )}
 
         {/* Advanced Settings Toggle & Actions */}
-        <div className="flex items-center justify-between pt-1">
+        <div className="flex items-center justify-between pt-0.5">
           {mode === 'build' ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2.5 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1 px-2 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Architecture Parameters</span>
+                <span>Parameters</span>
                 {showAdvanced ? (
                   <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
                 ) : (
@@ -524,11 +512,11 @@ export const CompilerStudio = () => {
                 <button
                   type="button"
                   onClick={handleResetDefaults}
-                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-1 rounded cursor-pointer"
-                  title="Reset to system defaults"
+                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-0.5 rounded cursor-pointer"
+                  title="Reset to defaults"
                 >
                   <RotateCcw className="w-3 h-3" />
-                  <span>Reset defaults</span>
+                  <span>Reset</span>
                 </button>
               )}
             </div>
@@ -537,10 +525,10 @@ export const CompilerStudio = () => {
               <button
                 type="button"
                 onClick={() => setShowFixAdvanced(!showFixAdvanced)}
-                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2.5 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1 px-2 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Preservation Guardrails</span>
+                <span>Guardrails</span>
                 {showFixAdvanced ? (
                   <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
                 ) : (
@@ -552,11 +540,11 @@ export const CompilerStudio = () => {
                 <button
                   type="button"
                   onClick={handleResetFixDefaults}
-                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-1 rounded cursor-pointer"
-                  title="Reset to system defaults"
+                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-0.5 rounded cursor-pointer"
+                  title="Reset to defaults"
                 >
                   <RotateCcw className="w-3 h-3" />
-                  <span>Reset defaults</span>
+                  <span>Reset</span>
                 </button>
               )}
             </div>
@@ -565,18 +553,13 @@ export const CompilerStudio = () => {
 
         {/* ================= ADVANCED SECTION (INITIAL BUILD) ================= */}
         {mode === 'build' && showAdvanced && (
-          <div className="p-5 bg-zinc-50/80 rounded-2xl space-y-6 animate-in fade-in duration-150">
+          <div className="p-5 bg-zinc-50/80 rounded-2xl space-y-5 animate-in fade-in duration-150">
             {/* 1. Tech Stack & Platform */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500">
-                    Tech Stack
-                  </span>
-                  {!overrides.techStack && (
-                    <span className="text-[10px] text-zinc-400">Default</span>
-                  )}
-                </div>
+                <span className="text-xs font-medium text-zinc-500">
+                  Tech Stack
+                </span>
                 <Select
                   value={techStack}
                   onChange={(val) => {
@@ -588,14 +571,9 @@ export const CompilerStudio = () => {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500">
-                    Target Agent
-                  </span>
-                  {!overrides.platform && (
-                    <span className="text-[10px] text-zinc-400">Default</span>
-                  )}
-                </div>
+                <span className="text-xs font-medium text-zinc-500">
+                  Target Agent
+                </span>
                 <Select
                   value={platform}
                   onChange={(val) => {
@@ -608,14 +586,13 @@ export const CompilerStudio = () => {
             </div>
 
             {/* 2. Temperature Slider */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-zinc-500">
-                  Precision Level
+                  Precision
                 </span>
-                <span className="text-zinc-400 font-mono">
+                <span className="text-zinc-400 font-mono text-[11px]">
                   {temperature} • {getTemperatureLabel(temperature)}
-                  {!overrides.temperature && ' (Default)'}
                 </span>
               </div>
               <Slider
@@ -629,9 +606,8 @@ export const CompilerStudio = () => {
                 }}
               />
               <div className="flex justify-between text-[10px] text-zinc-400">
-                <span>0.0 Strict & Deterministic</span>
-                <span>0.5 Balanced</span>
-                <span>1.0 Exploratory</span>
+                <span>0.0 Strict</span>
+                <span>1.0 Creative</span>
               </div>
             </div>
 
@@ -761,14 +737,9 @@ export const CompilerStudio = () => {
             {/* 1. Target Agent & Fix Strategy */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500">
-                    Target Agent
-                  </span>
-                  {!fixOverrides.platform && (
-                    <span className="text-[10px] text-zinc-400">Default</span>
-                  )}
-                </div>
+                <span className="text-xs font-medium text-zinc-500">
+                  Target Agent
+                </span>
                 <Select
                   value={fixPlatform}
                   onChange={(val) => {
@@ -780,14 +751,9 @@ export const CompilerStudio = () => {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500">
-                    Fix Strategy
-                  </span>
-                  {!fixOverrides.fixStrategy && (
-                    <span className="text-[10px] text-zinc-400">Default</span>
-                  )}
-                </div>
+                <span className="text-xs font-medium text-zinc-500">
+                  Fix Strategy
+                </span>
                 <Select
                   value={fixStrategy}
                   onChange={(val) => {
@@ -802,14 +768,9 @@ export const CompilerStudio = () => {
             {/* 2. Issue Domain & Verification Method */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500">
-                    Issue Domain
-                  </span>
-                  {!fixOverrides.issueDomain && (
-                    <span className="text-[10px] text-zinc-400">Default</span>
-                  )}
-                </div>
+                <span className="text-xs font-medium text-zinc-500">
+                  Issue Domain
+                </span>
                 <Select
                   value={issueDomain}
                   onChange={(val) => {
@@ -821,14 +782,9 @@ export const CompilerStudio = () => {
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-zinc-500">
-                    Verification Method
-                  </span>
-                  {!fixOverrides.verification && (
-                    <span className="text-[10px] text-zinc-400">Default</span>
-                  )}
-                </div>
+                <span className="text-xs font-medium text-zinc-500">
+                  Verification Method
+                </span>
                 <Select
                   value={verification}
                   onChange={(val) => {
@@ -840,19 +796,12 @@ export const CompilerStudio = () => {
               </div>
             </div>
 
-            {/* 3. Safety & Preservation Guardrails */}
+            {/* 3. Safety Guardrails */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-zinc-500">
-                  Preservation & Safety Guardrails
+                  Safety Guardrails
                 </span>
-                {!fixOverrides.safetyRules ? (
-                  <span className="text-[10px] text-zinc-400">Default: 3 active</span>
-                ) : (
-                  <span className="text-[10px] text-zinc-700 font-medium">
-                    {safetyRules.length} active
-                  </span>
-                )}
               </div>
 
               <div className="flex flex-wrap gap-1.5 pt-1">
