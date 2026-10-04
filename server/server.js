@@ -15,17 +15,21 @@ const app = express();
 
 // Security & Body Parsers
 const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
-];
+].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or same-origin)
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
+      }
+      if (process.env.NODE_ENV === 'production') {
+        return callback(new Error('CORS blocked: Origin not permitted'), false);
       }
       return callback(null, true); // Dev-friendly fallback
     },
