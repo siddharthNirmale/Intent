@@ -1,6 +1,18 @@
 // Automatically normalize base URL to guarantee a valid endpoint ending with /api
-const rawBase = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/+$/, '');
-const API_BASE = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
+const getApiBase = () => {
+  const envUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+  if (envUrl) {
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+  }
+  // In production builds without explicit VITE_API_URL, target deployed backend
+  if (import.meta.env.PROD) {
+    return 'https://intent-server-ten.vercel.app/api';
+  }
+  // Local development defaults to Vite dev proxy /api
+  return '/api';
+};
+
+const API_BASE = getApiBase();
 
 /**
  * Helper to get the saved JWT from localStorage
@@ -56,10 +68,19 @@ async function request(endpoint, options = {}) {
 
     return data;
   } catch (error) {
+    if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+      const friendlyError = new Error(
+        'Unable to reach server. Please check your network connection or verify that the backend is online.'
+      );
+      friendlyError.originalError = error;
+      console.error(`[API Network Error] ${options.method || 'GET'} ${endpoint}:`, error);
+      throw friendlyError;
+    }
     console.error(`[API Error] ${options.method || 'GET'} ${endpoint}:`, error.message);
     throw error;
   }
 }
+
 
 // Auth API Methods
 export const apiAuth = {
