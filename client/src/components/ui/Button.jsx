@@ -15,13 +15,15 @@ export const Button = React.forwardRef(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-colors select-none disabled:opacity-40 disabled:pointer-events-none outline-none';
+      'inline-flex items-center justify-center font-medium transition-colors select-none disabled:opacity-40 disabled:pointer-events-none cursor-pointer outline-none';
 
     const variants = {
       primary: 'bg-zinc-950 text-white hover:bg-zinc-800 active:bg-zinc-900',
       secondary: 'bg-zinc-100 text-zinc-900 hover:bg-zinc-200 active:bg-zinc-300',
+      outline: 'border border-zinc-200/80 bg-white text-zinc-900 hover:bg-zinc-50 active:bg-zinc-100',
       ghost: 'bg-transparent text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/70',
       subtle: 'bg-zinc-50 text-zinc-700 hover:bg-zinc-100',
+      destructive: 'bg-red-50 text-red-600 hover:bg-red-100 active:bg-red-200',
     };
 
     const sizes = {

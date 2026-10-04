@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from '../context/RouterContext';
 import Button from './ui/Button';
 import AccountSettingsModal from './AccountSettingsModal';
 
 export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { pathname, navigate } = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountModalTab, setAccountModalTab] = useState('account');
@@ -52,8 +54,7 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
     if (onSelectAccount) {
       onSelectAccount();
     } else {
-      setAccountModalTab('account');
-      setAccountModalOpen(true);
+      navigate('/settings#account');
     }
   };
 
@@ -62,24 +63,52 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
     if (onSelectSettings) {
       onSelectSettings();
     } else {
-      setAccountModalTab('settings');
-      setAccountModalOpen(true);
+      navigate('/settings#settings');
     }
   };
 
+  const isSettingsPage = pathname === '/settings' || pathname?.startsWith('/settings');
+
   return (
     <>
-      <header className="w-full bg-white">
-        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
+      <header className="w-full bg-white border-b border-zinc-100">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Brand */}
-          <span className="font-semibold text-sm tracking-tight text-zinc-950 select-none">
-            Intent
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="font-semibold text-sm tracking-tight text-zinc-950 select-none hover:opacity-75 transition-opacity cursor-pointer outline-none flex items-center gap-2"
+              title="Go to Studio"
+            >
+              <span>Intent</span>
+            </button>
+
+            {isSettingsPage && (
+              <span className="text-xs text-zinc-300 select-none">/</span>
+            )}
+            {isSettingsPage && (
+              <span className="text-xs font-medium text-zinc-500 select-none">
+                Settings
+              </span>
+            )}
+          </div>
 
           {/* User state / Auth action */}
           <div>
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
+                {isSettingsPage && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate('/')}
+                    className="text-xs text-zinc-600 hover:text-zinc-950 hidden sm:inline-flex"
+                  >
+                    Studio
+                  </Button>
+                )}
+
                 {/* User Dropdown Trigger & Menu */}
                 <div
                   ref={menuRef}
@@ -95,7 +124,7 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
                     aria-haspopup="true"
                   >
                     {/* User Avatar */}
-                    <div className="w-5 h-5 rounded-full overflow-hidden bg-zinc-100 ring-1 ring-zinc-950/10 flex items-center justify-center shrink-0">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-zinc-100 ring-1 ring-zinc-950/10 flex items-center justify-center shrink-0">
                       {user?.avatar ? (
                         <img
                           src={user.avatar}
@@ -116,7 +145,7 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
 
                   {/* Dropdown Menu */}
                   <div
-                    className={`absolute left-0 top-full pt-1.5 z-50 transition-all duration-150 ease-out ${
+                    className={`absolute right-0 top-full pt-1.5 z-50 transition-all duration-150 ease-out ${
                       dropdownOpen
                         ? 'opacity-100 translate-y-0 visible pointer-events-auto'
                         : 'opacity-0 -translate-y-1 invisible pointer-events-none'

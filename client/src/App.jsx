@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
+import { RouterProvider, useRouter } from './context/RouterContext';
 import Navbar from './components/Navbar';
 import AuthModal from './components/AuthModal';
 import AccountSettingsModal from './components/AccountSettingsModal';
 import CompilerStudio from './components/IntentCompiler/CompilerStudio';
+import SettingsPage from './pages/SettingsPage';
 
 export const AppContent = () => {
+  const { pathname, navigate } = useRouter();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login');
   const [accountModalOpen, setAccountModalOpen] = useState(false);
@@ -17,14 +20,14 @@ export const AppContent = () => {
   };
 
   const handleOpenAccount = () => {
-    setAccountModalTab('account');
-    setAccountModalOpen(true);
+    navigate('/settings#account');
   };
 
   const handleOpenSettings = () => {
-    setAccountModalTab('settings');
-    setAccountModalOpen(true);
+    navigate('/settings#settings');
   };
+
+  const isSettingsPage = pathname === '/settings' || pathname.startsWith('/settings');
 
   return (
     <div className="min-h-screen bg-white text-zinc-950 flex flex-col selection:bg-zinc-200">
@@ -34,8 +37,12 @@ export const AppContent = () => {
         onSelectSettings={handleOpenSettings}
       />
 
-      <main className="flex-1 px-6">
-        <CompilerStudio />
+      <main className="flex-1 px-4 sm:px-6">
+        {isSettingsPage ? (
+          <SettingsPage onOpenAuth={handleOpenAuth} />
+        ) : (
+          <CompilerStudio />
+        )}
       </main>
 
       <AuthModal
@@ -55,9 +62,11 @@ export const AppContent = () => {
 
 export const App = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <RouterProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </RouterProvider>
   );
 };
 
