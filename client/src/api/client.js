@@ -1,4 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+// Automatically normalize base URL to guarantee a valid endpoint ending with /api
+const rawBase = (import.meta.env.VITE_API_URL || '/api').trim().replace(/\/+$/, '');
+const API_BASE = rawBase.endsWith('/api') ? rawBase : `${rawBase}/api`;
 
 /**
  * Helper to get the saved JWT from localStorage
