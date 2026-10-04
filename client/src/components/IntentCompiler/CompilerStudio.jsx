@@ -379,11 +379,10 @@ export const CompilerStudio = () => {
             setMode('build');
             setResult(null);
           }}
-          className={`transition-colors cursor-pointer ${
-            mode === 'build'
-              ? 'text-zinc-950 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-700'
-          }`}
+          className={`transition-colors cursor-pointer ${mode === 'build'
+            ? 'text-zinc-950 font-semibold'
+            : 'text-zinc-400 hover:text-zinc-700'
+            }`}
         >
           Initial Build
         </button>
@@ -394,11 +393,10 @@ export const CompilerStudio = () => {
             setMode('fix');
             setResult(null);
           }}
-          className={`transition-colors cursor-pointer ${
-            mode === 'fix'
-              ? 'text-zinc-950 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-700'
-          }`}
+          className={`transition-colors cursor-pointer ${mode === 'fix'
+            ? 'text-zinc-950 font-semibold'
+            : 'text-zinc-400 hover:text-zinc-700'
+            }`}
         >
           Command Fix
         </button>
@@ -594,11 +592,10 @@ export const CompilerStudio = () => {
                         setSelectedPaletteId(palette.id);
                         setOverrides((prev) => ({ ...prev, colorPalette: true }));
                       }}
-                      className={`p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 cursor-pointer ${
-                        isSelected
-                          ? 'bg-white shadow-xs ring-1 ring-zinc-950/10'
-                          : 'bg-zinc-100/60 hover:bg-zinc-100'
-                      }`}
+                      className={`p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 cursor-pointer ${isSelected
+                        ? 'bg-white shadow-xs ring-1 ring-zinc-950/10'
+                        : 'bg-zinc-100/60 hover:bg-zinc-100'
+                        }`}
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="text-xs font-medium text-zinc-900 truncate">
@@ -847,11 +844,10 @@ export const CompilerStudio = () => {
                       key={rule}
                       type="button"
                       onClick={() => toggleSafetyRule(rule)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
-                        isActive
-                          ? 'bg-zinc-900 text-white font-medium shadow-xs'
-                          : 'bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
-                      }`}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-colors cursor-pointer ${isActive
+                        ? 'bg-zinc-900 text-white font-medium shadow-xs'
+                        : 'bg-white text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950'
+                        }`}
                     >
                       {isActive && <Check className="w-3 h-3 text-white" />}
                       <span>{rule}</span>

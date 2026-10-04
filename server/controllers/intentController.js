@@ -70,19 +70,19 @@ const compileDeveloperIntent = (rawPrompt, targetAgent = 'claude-code', mode = '
 
     const verifyStep = isManualVerification
       ? {
-          stepNumber: 3,
-          title: 'Manual Verification',
-          targetFiles: ['reproduction steps'],
-          instructions: 'Follow explicit step-by-step reproduction instructions to verify fix manually.',
-          verificationCriteria: 'Manually verified with zero reproduction of issue.',
-        }
+        stepNumber: 3,
+        title: 'Manual Verification',
+        targetFiles: ['reproduction steps'],
+        instructions: 'Follow explicit step-by-step reproduction instructions to verify fix manually.',
+        verificationCriteria: 'Manually verified with zero reproduction of issue.',
+      }
       : {
-          stepNumber: 3,
-          title: 'Regression Verification',
-          targetFiles: ['runtime / tests'],
-          instructions: 'Test the fixed command or flow to verify expected behavior.',
-          verificationCriteria: 'Exits cleanly with expected status 0.',
-        };
+        stepNumber: 3,
+        title: 'Regression Verification',
+        targetFiles: ['runtime / tests'],
+        instructions: 'Test the fixed command or flow to verify expected behavior.',
+        verificationCriteria: 'Exits cleanly with expected status 0.',
+      };
 
     structuredPlan = [
       {
