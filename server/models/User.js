@@ -26,6 +26,15 @@ const userSchema = new mongoose.Schema(
       minlength: [6, 'Password must be at least 6 characters'],
       select: false, // Do not return password by default in queries
     },
+    avatar: {
+      type: String,
+      default: '',
+    },
+    apiKey: {
+      type: String,
+      default: '',
+      select: false,
+    },
   },
   {
     timestamps: true,

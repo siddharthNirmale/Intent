@@ -86,6 +86,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async ({ name, avatar }) => {
+    setError(null);
+    try {
+      let updatedUser = { ...(user || {}) };
+      if (name) updatedUser.name = name;
+      if (avatar !== undefined) updatedUser.avatar = avatar;
+
+      try {
+        const response = await apiAuth.updateProfile({ name, avatar });
+        if (response.success && response.user) {
+          updatedUser = response.user;
+        }
+      } catch (apiErr) {
+        console.warn('Backend updateProfile unavailable, persisting locally:', apiErr.message);
+      }
+
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (err) {
+      const msg = err.message || 'Failed to update profile.';
+      setError(msg);
+      throw new Error(msg);
+    }
+  };
+
   const clearError = () => setError(null);
 
   const value = {
@@ -96,6 +121,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: Boolean(user && token),
     login,
     register,
+    updateProfile,
     logout,
     clearError,
   };

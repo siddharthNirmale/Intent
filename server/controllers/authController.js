@@ -66,6 +66,7 @@ export const registerUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar || '',
         createdAt: user.createdAt,
       },
       token,
@@ -131,6 +132,7 @@ export const loginUser = async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
+        avatar: user.avatar || '',
         createdAt: user.createdAt,
       },
       token,
@@ -157,6 +159,7 @@ export const getMe = async (req, res) => {
         id: req.user._id,
         name: req.user.name,
         email: req.user.email,
+        avatar: req.user.avatar || '',
         createdAt: req.user.createdAt,
       },
     });
@@ -165,6 +168,142 @@ export const getMe = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Server error retrieving user profile',
+    });
+  }
+};
+
+/**
+ * @desc    Update user profile (name, avatar)
+ * @route   PUT /api/auth/profile
+ * @access  Private
+ */
+export const updateProfile = async (req, res) => {
+  try {
+    if (!getDbStatus()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is currently offline.',
+      });
+    }
+
+    const { name, avatar } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (name && typeof name === 'string' && name.trim()) {
+      user.name = name.trim();
+    }
+
+    if (avatar !== undefined && typeof avatar === 'string') {
+      user.avatar = avatar.trim();
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || '',
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('[Update Profile Error]:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error updating profile',
+    });
+  }
+};
+
+/**
+ * @desc    Get API key status & masked value
+ * @route   GET /api/auth/api-key
+ * @access  Private
+ */
+export const getApiKey = async (req, res) => {
+  try {
+    if (!getDbStatus()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is currently offline.',
+      });
+    }
+
+    const user = await User.findById(req.user._id).select('+apiKey');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const key = user.apiKey || '';
+    const hasKey = Boolean(key);
+    const maskedKey = key && key.length > 8 ? `${key.slice(0, 4)}••••••••${key.slice(-4)}` : key ? '••••••••' : '';
+
+    return res.status(200).json({
+      success: true,
+      hasKey,
+      maskedKey,
+      apiKey: key,
+    });
+  } catch (error) {
+    console.error('[Get API Key Error]:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error retrieving API key',
+    });
+  }
+};
+
+/**
+ * @desc    Update or clear API key
+ * @route   PUT /api/auth/api-key
+ * @access  Private
+ */
+export const updateApiKey = async (req, res) => {
+  try {
+    if (!getDbStatus()) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database is currently offline.',
+      });
+    }
+
+    const { apiKey } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.apiKey = typeof apiKey === 'string' ? apiKey.trim() : '';
+    await user.save();
+
+    const key = user.apiKey || '';
+    const hasKey = Boolean(key);
+    const maskedKey = key && key.length > 8 ? `${key.slice(0, 4)}••••••••${key.slice(-4)}` : key ? '••••••••' : '';
+
+    return res.status(200).json({
+      success: true,
+      message: hasKey ? 'API key updated successfully' : 'API key cleared',
+      hasKey,
+      maskedKey,
+      apiKey: key,
+    });
+  } catch (error) {
+    console.error('[Update API Key Error]:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Server error updating API key',
     });
   }
 };
