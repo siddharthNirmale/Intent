@@ -2,20 +2,21 @@ import React, { useState } from 'react';
 import Button from '../ui/Button';
 import Textarea from '../ui/Textarea';
 import Slider from '../ui/Slider';
+import Select from '../ui/Select';
 import { apiIntent } from '../../api/client';
 import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
-const PLATFORMS = [
-  { id: 'claude-code', name: 'Claude Code' },
-  { id: 'antigravity', name: 'Antigravity' },
-  { id: 'cursor', name: 'Cursor' },
-  { id: 'codex', name: 'Codex' },
+const PLATFORM_OPTIONS = [
+  { id: 'claude-code', label: 'Claude Code' },
+  { id: 'antigravity', label: 'Antigravity' },
+  { id: 'cursor', label: 'Cursor' },
+  { id: 'codex', label: 'Codex' },
 ];
 
-const TECH_STACK_CATEGORIES = [
+const TECH_STACK_OPTIONS = [
   {
     group: 'Full Stack Frameworks',
-    stacks: [
+    items: [
       'MERN Stack (React, Express, MongoDB)',
       'Next.js 15 (App Router, RSC, Tailwind)',
       'T3 Stack (Next.js, tRPC, Prisma, Tailwind)',
@@ -27,7 +28,7 @@ const TECH_STACK_CATEGORIES = [
   },
   {
     group: 'Frontend Focused',
-    stacks: [
+    items: [
       'React + Vite + Tailwind CSS',
       'Vue 3 + Vite + Pinia + Tailwind',
       'SvelteKit + Tailwind CSS (Frontend)',
@@ -36,7 +37,7 @@ const TECH_STACK_CATEGORIES = [
   },
   {
     group: 'Backend, APIs & Runtimes',
-    stacks: [
+    items: [
       'Node.js + Express.js + Mongoose',
       'Python + FastAPI + SQLAlchemy',
       'NestJS + TypeScript + PostgreSQL',
@@ -47,7 +48,7 @@ const TECH_STACK_CATEGORIES = [
   },
   {
     group: 'Custom',
-    stacks: ['Custom Architecture'],
+    items: ['Custom Architecture'],
   },
 ];
 
@@ -168,7 +169,7 @@ export const CompilerStudio = () => {
   const [selectedLibraries, setSelectedLibraries] = useState([...SYSTEM_DEFAULTS.selectedLibraries]);
   const [libSearch, setLibSearch] = useState('');
 
-  // Track explicit user overrides (optional settings)
+  // Track explicit user overrides
   const [overrides, setOverrides] = useState({
     techStack: false,
     platform: false,
@@ -234,7 +235,6 @@ export const CompilerStudio = () => {
 
     setLoading(true);
     try {
-      // Build dynamic config: only pass customized options, letting backend seamlessly apply system defaults for untouched settings
       const dynamicConfig = {};
       if (overrides.techStack) dynamicConfig.techStack = techStack;
       if (overrides.platform) dynamicConfig.platform = platform;
@@ -276,7 +276,7 @@ export const CompilerStudio = () => {
             setMode('build');
             setResult(null);
           }}
-          className={`transition-colors ${
+          className={`transition-colors cursor-pointer ${
             mode === 'build'
               ? 'text-zinc-950 font-semibold'
               : 'text-zinc-400 hover:text-zinc-700'
@@ -291,7 +291,7 @@ export const CompilerStudio = () => {
             setMode('fix');
             setResult(null);
           }}
-          className={`transition-colors ${
+          className={`transition-colors cursor-pointer ${
             mode === 'fix'
               ? 'text-zinc-950 font-semibold'
               : 'text-zinc-400 hover:text-zinc-700'
@@ -329,13 +329,10 @@ export const CompilerStudio = () => {
               <button
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors cursor-pointer"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
                 <span>Advanced</span>
-                {hasCustomOverrides && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-900" />
-                )}
                 {showAdvanced ? (
                   <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
                 ) : (
@@ -347,7 +344,7 @@ export const CompilerStudio = () => {
                 <button
                   type="button"
                   onClick={handleResetDefaults}
-                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-1 rounded"
+                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-1 rounded cursor-pointer"
                   title="Reset to system defaults"
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -356,19 +353,13 @@ export const CompilerStudio = () => {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400">Platform:</span>
-              <select
+            <div className="flex items-center gap-2 w-44">
+              <span className="text-xs text-zinc-400 shrink-0">Platform:</span>
+              <Select
                 value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-                className="text-xs text-zinc-700 bg-transparent py-1 outline-none cursor-pointer hover:text-zinc-950 transition-colors"
-              >
-                {PLATFORMS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setPlatform(val)}
+                options={PLATFORM_OPTIONS}
+              />
             </div>
           )}
 
@@ -386,7 +377,7 @@ export const CompilerStudio = () => {
         {/* ================= OPTIONAL ADVANCED SECTION ================= */}
         {mode === 'build' && showAdvanced && (
           <div className="mt-3 p-5 bg-zinc-50/80 rounded-2xl space-y-6 animate-in fade-in duration-150">
-            {/* 1. Tech Stack & Platform */}
+            {/* 1. Tech Stack & Platform with shadcn Select */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Tech Stack */}
               <div className="space-y-1.5">
@@ -398,24 +389,14 @@ export const CompilerStudio = () => {
                     <span className="text-[10px] text-zinc-400">Default</span>
                   )}
                 </div>
-                <select
+                <Select
                   value={techStack}
-                  onChange={(e) => {
-                    setTechStack(e.target.value);
+                  onChange={(val) => {
+                    setTechStack(val);
                     setOverrides((prev) => ({ ...prev, techStack: true }));
                   }}
-                  className="w-full text-xs text-zinc-900 bg-white px-3 py-2 rounded-lg outline-none cursor-pointer"
-                >
-                  {TECH_STACK_CATEGORIES.map((cat) => (
-                    <optgroup key={cat.group} label={cat.group}>
-                      {cat.stacks.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
+                  options={TECH_STACK_OPTIONS}
+                />
               </div>
 
               {/* Target Platform */}
@@ -428,20 +409,14 @@ export const CompilerStudio = () => {
                     <span className="text-[10px] text-zinc-400">Default</span>
                   )}
                 </div>
-                <select
+                <Select
                   value={platform}
-                  onChange={(e) => {
-                    setPlatform(e.target.value);
+                  onChange={(val) => {
+                    setPlatform(val);
                     setOverrides((prev) => ({ ...prev, platform: true }));
                   }}
-                  className="w-full text-xs text-zinc-900 bg-white px-3 py-2 rounded-lg outline-none cursor-pointer"
-                >
-                  {PLATFORMS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  options={PLATFORM_OPTIONS}
+                />
               </div>
             </div>
 
@@ -497,7 +472,7 @@ export const CompilerStudio = () => {
                         setSelectedPaletteId(palette.id);
                         setOverrides((prev) => ({ ...prev, colorPalette: true }));
                       }}
-                      className={`p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 ${
+                      className={`p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 cursor-pointer ${
                         isSelected
                           ? 'bg-white shadow-xs ring-1 ring-zinc-950/10'
                           : 'bg-zinc-100/60 hover:bg-zinc-100'
@@ -606,7 +581,7 @@ export const CompilerStudio = () => {
                       <button
                         type="button"
                         onClick={() => toggleLibrary(lib)}
-                        className="text-zinc-400 hover:text-white"
+                        className="text-zinc-400 hover:text-white cursor-pointer"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -627,7 +602,7 @@ export const CompilerStudio = () => {
                       key={lib}
                       type="button"
                       onClick={() => toggleLibrary(lib)}
-                      className="px-2 py-0.5 rounded text-[11px] bg-white text-zinc-600 hover:text-zinc-950 transition-colors"
+                      className="px-2 py-0.5 rounded text-[11px] bg-white text-zinc-600 hover:text-zinc-950 transition-colors cursor-pointer"
                     >
                       + {lib}
                     </button>
@@ -649,7 +624,7 @@ export const CompilerStudio = () => {
             <button
               type="button"
               onClick={handleCopy}
-              className="text-xs text-zinc-500 hover:text-zinc-950 transition-colors"
+              className="text-xs text-zinc-500 hover:text-zinc-950 transition-colors cursor-pointer"
             >
               {copied ? 'Copied' : 'Copy'}
             </button>
