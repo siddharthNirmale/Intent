@@ -5,11 +5,18 @@
 @layer base {
   * {
     border-color: transparent;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
   }
   
   html {
     color-scheme: light;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Prevents horizontal layout shifts when content expands or scrollbars appear */
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -18,13 +25,14 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
 }
 
-/* Custom scrollbar for clean developer interface */
+/* Universal Clean, Subtle Scrollbar Styling */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -32,10 +40,21 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #e4e4e7;
+  background-color: rgba(0, 0, 0, 0.14);
   border-radius: 9999px;
+  transition: background-color 0.15s ease-in-out;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #d4d4d8;
+  background-color: rgba(0, 0, 0, 0.28);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Smooth unobtrusive scrolling utility */
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.14) transparent;
 }

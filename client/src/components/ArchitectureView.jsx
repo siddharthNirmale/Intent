@@ -158,7 +158,7 @@ export const ArchitectureView = () => {
           Clean Directory Separation
         </span>
         <div className="bg-zinc-50/80 p-5 rounded-2xl">
-          <pre className="font-mono text-xs text-zinc-800 leading-relaxed overflow-x-auto">
+          <pre className="font-mono text-xs text-zinc-800 leading-relaxed overflow-x-auto pb-2">
 {`project/
 ├── client/                     # Vite + React (JavaScript, Tailwind, Zero-border UI)
 │   ├── src/

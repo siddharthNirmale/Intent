@@ -631,7 +631,7 @@ export const CompilerStudio = () => {
           </div>
 
           <div className="bg-zinc-50 p-4 rounded-xl">
-            <pre className="font-mono text-xs text-zinc-800 whitespace-pre-wrap leading-relaxed">
+            <pre className="font-mono text-xs text-zinc-800 whitespace-pre-wrap break-words leading-relaxed max-h-[520px] overflow-y-auto pr-2">
               {result.compiledAgentPrompt}
             </pre>
           </div>

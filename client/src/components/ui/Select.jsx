@@ -89,7 +89,7 @@ export const Select = ({
 
       {/* Menu Dropdown Popup */}
       {isOpen && (
-        <div className="absolute left-0 top-[calc(100%+4px)] w-full min-w-[200px] max-h-64 overflow-y-auto bg-white rounded-xl shadow-float p-1 z-50 animate-in fade-in duration-100">
+        <div className="absolute left-0 top-[calc(100%+4px)] w-full min-w-[200px] max-h-64 overflow-y-auto bg-white rounded-xl shadow-float p-1 pr-1.5 z-50 animate-in fade-in duration-100">
           {options.map((opt, optIdx) => {
             // Grouped Options
             if (opt.group && Array.isArray(opt.items)) {
