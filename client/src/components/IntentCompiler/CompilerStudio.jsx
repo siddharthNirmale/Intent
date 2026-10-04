@@ -3,7 +3,7 @@ import Button from '../ui/Button';
 import Textarea from '../ui/Textarea';
 import Slider from '../ui/Slider';
 import { apiIntent } from '../../api/client';
-import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal, Palette } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Search, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 const PLATFORMS = [
   { id: 'claude-code', name: 'Claude Code' },
@@ -146,21 +146,36 @@ const CURATED_LIBRARIES = [
   'NextAuth / Auth.js',
 ];
 
+// Predefined system defaults
+const SYSTEM_DEFAULTS = {
+  techStack: 'MERN Stack (React, Express, MongoDB)',
+  platform: 'claude-code',
+  temperature: 0.2,
+  selectedPaletteId: 'white-first',
+  selectedLibraries: ['Tailwind CSS', 'JWT'],
+};
+
 export const CompilerStudio = () => {
   const [mode, setMode] = useState('build'); // 'build' | 'fix'
   const [prompt, setPrompt] = useState('');
 
-  // Configuration (inside Advanced section for Initial Build)
+  // Advanced settings state initialized to predefined defaults
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [techStack, setTechStack] = useState('MERN Stack (React, Express, MongoDB)');
-  const [platform, setPlatform] = useState('claude-code');
-  const [temperature, setTemperature] = useState(0.2);
-  const [selectedPaletteId, setSelectedPaletteId] = useState('white-first');
-  const [selectedLibraries, setSelectedLibraries] = useState([
-    'Tailwind CSS',
-    'JWT',
-  ]);
+  const [techStack, setTechStack] = useState(SYSTEM_DEFAULTS.techStack);
+  const [platform, setPlatform] = useState(SYSTEM_DEFAULTS.platform);
+  const [temperature, setTemperature] = useState(SYSTEM_DEFAULTS.temperature);
+  const [selectedPaletteId, setSelectedPaletteId] = useState(SYSTEM_DEFAULTS.selectedPaletteId);
+  const [selectedLibraries, setSelectedLibraries] = useState([...SYSTEM_DEFAULTS.selectedLibraries]);
   const [libSearch, setLibSearch] = useState('');
+
+  // Track explicit user overrides (optional settings)
+  const [overrides, setOverrides] = useState({
+    techStack: false,
+    platform: false,
+    temperature: false,
+    colorPalette: false,
+    libraries: false,
+  });
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -169,7 +184,25 @@ export const CompilerStudio = () => {
   const activePalette =
     COLOR_PALETTES.find((p) => p.id === selectedPaletteId) || COLOR_PALETTES[0];
 
+  const hasCustomOverrides = Object.values(overrides).some(Boolean);
+
+  const handleResetDefaults = () => {
+    setTechStack(SYSTEM_DEFAULTS.techStack);
+    setPlatform(SYSTEM_DEFAULTS.platform);
+    setTemperature(SYSTEM_DEFAULTS.temperature);
+    setSelectedPaletteId(SYSTEM_DEFAULTS.selectedPaletteId);
+    setSelectedLibraries([...SYSTEM_DEFAULTS.selectedLibraries]);
+    setOverrides({
+      techStack: false,
+      platform: false,
+      temperature: false,
+      colorPalette: false,
+      libraries: false,
+    });
+  };
+
   const toggleLibrary = (lib) => {
+    setOverrides((prev) => ({ ...prev, libraries: true }));
     if (selectedLibraries.includes(lib)) {
       setSelectedLibraries(selectedLibraries.filter((item) => item !== lib));
     } else {
@@ -181,6 +214,7 @@ export const CompilerStudio = () => {
     if (e.key === 'Enter' && libSearch.trim()) {
       e.preventDefault();
       const val = libSearch.trim();
+      setOverrides((prev) => ({ ...prev, libraries: true }));
       if (!selectedLibraries.includes(val)) {
         setSelectedLibraries([...selectedLibraries, val]);
       }
@@ -200,20 +234,19 @@ export const CompilerStudio = () => {
 
     setLoading(true);
     try {
+      // Build dynamic config: only pass customized options, letting backend seamlessly apply system defaults for untouched settings
+      const dynamicConfig = {};
+      if (overrides.techStack) dynamicConfig.techStack = techStack;
+      if (overrides.platform) dynamicConfig.platform = platform;
+      if (overrides.temperature) dynamicConfig.temperature = `${temperature} (${getTemperatureLabel(temperature)})`;
+      if (overrides.colorPalette) dynamicConfig.colorPalette = `${activePalette.name} (Background: ${activePalette.bg}, Surface: ${activePalette.surface}, Accent: ${activePalette.accent})`;
+      if (overrides.libraries) dynamicConfig.libraries = selectedLibraries;
+
       const response = await apiIntent.compile({
         rawPrompt: prompt,
         targetAgent: platform,
         mode,
-        config:
-          mode === 'build'
-            ? {
-                techStack,
-                platform,
-                temperature: `${temperature} (${getTemperatureLabel(temperature)})`,
-                colorPalette: `${activePalette.name} (Background: ${activePalette.bg}, Surface: ${activePalette.surface}, Accent: ${activePalette.accent})`,
-                libraries: selectedLibraries,
-              }
-            : undefined,
+        config: mode === 'build' ? dynamicConfig : undefined,
       });
 
       if (response.success && response.data) {
@@ -292,19 +325,36 @@ export const CompilerStudio = () => {
         {/* Action Row - Clean and Minimal by Default */}
         <div className="flex items-center justify-between pt-1">
           {mode === 'build' ? (
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors"
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Advanced</span>
-              {showAdvanced ? (
-                <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-950 font-medium py-1.5 px-2 rounded-lg hover:bg-zinc-100/70 transition-colors"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Advanced</span>
+                {hasCustomOverrides && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-900" />
+                )}
+                {showAdvanced ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-zinc-400" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+                )}
+              </button>
+
+              {hasCustomOverrides && showAdvanced && (
+                <button
+                  type="button"
+                  onClick={handleResetDefaults}
+                  className="inline-flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors px-1.5 py-1 rounded"
+                  title="Reset to system defaults"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset defaults</span>
+                </button>
               )}
-            </button>
+            </div>
           ) : (
             <div className="flex items-center gap-2">
               <span className="text-xs text-zinc-400">Platform:</span>
@@ -333,19 +383,27 @@ export const CompilerStudio = () => {
           </Button>
         </div>
 
-        {/* ================= ADVANCED CONFIGURATION SECTION ================= */}
+        {/* ================= OPTIONAL ADVANCED SECTION ================= */}
         {mode === 'build' && showAdvanced && (
           <div className="mt-3 p-5 bg-zinc-50/80 rounded-2xl space-y-6 animate-in fade-in duration-150">
             {/* 1. Tech Stack & Platform */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Expanded Tech Stack with Groups */}
+              {/* Tech Stack */}
               <div className="space-y-1.5">
-                <span className="text-xs font-medium text-zinc-500 block">
-                  Tech Stack
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">
+                    Tech Stack
+                  </span>
+                  {!overrides.techStack && (
+                    <span className="text-[10px] text-zinc-400">Default</span>
+                  )}
+                </div>
                 <select
                   value={techStack}
-                  onChange={(e) => setTechStack(e.target.value)}
+                  onChange={(e) => {
+                    setTechStack(e.target.value);
+                    setOverrides((prev) => ({ ...prev, techStack: true }));
+                  }}
                   className="w-full text-xs text-zinc-900 bg-white px-3 py-2 rounded-lg outline-none cursor-pointer"
                 >
                   {TECH_STACK_CATEGORIES.map((cat) => (
@@ -362,12 +420,20 @@ export const CompilerStudio = () => {
 
               {/* Target Platform */}
               <div className="space-y-1.5">
-                <span className="text-xs font-medium text-zinc-500 block">
-                  Target Platform
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-500">
+                    Target Platform
+                  </span>
+                  {!overrides.platform && (
+                    <span className="text-[10px] text-zinc-400">Default</span>
+                  )}
+                </div>
                 <select
                   value={platform}
-                  onChange={(e) => setPlatform(e.target.value)}
+                  onChange={(e) => {
+                    setPlatform(e.target.value);
+                    setOverrides((prev) => ({ ...prev, platform: true }));
+                  }}
                   className="w-full text-xs text-zinc-900 bg-white px-3 py-2 rounded-lg outline-none cursor-pointer"
                 >
                   {PLATFORMS.map((p) => (
@@ -387,6 +453,7 @@ export const CompilerStudio = () => {
                 </span>
                 <span className="text-zinc-400 font-mono">
                   {temperature} • {getTemperatureLabel(temperature)}
+                  {!overrides.temperature && ' (Default)'}
                 </span>
               </div>
               <Slider
@@ -394,7 +461,10 @@ export const CompilerStudio = () => {
                 max={1}
                 step={0.1}
                 value={temperature}
-                onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                onChange={(e) => {
+                  setTemperature(parseFloat(e.target.value));
+                  setOverrides((prev) => ({ ...prev, temperature: true }));
+                }}
               />
               <div className="flex justify-between text-[10px] text-zinc-400">
                 <span>0.0 Strict</span>
@@ -403,14 +473,15 @@ export const CompilerStudio = () => {
               </div>
             </div>
 
-            {/* 3. Dynamic & Interactive Color Palette Selector */}
+            {/* 3. Color Palette */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-zinc-500">
                   Color Palette
                 </span>
                 <span className="text-[11px] text-zinc-400">
-                  Selected: <span className="font-medium text-zinc-700">{activePalette.name}</span>
+                  {overrides.colorPalette ? 'Customized: ' : 'Default: '}
+                  <span className="font-medium text-zinc-700">{activePalette.name}</span>
                 </span>
               </div>
 
@@ -422,7 +493,10 @@ export const CompilerStudio = () => {
                     <button
                       key={palette.id}
                       type="button"
-                      onClick={() => setSelectedPaletteId(palette.id)}
+                      onClick={() => {
+                        setSelectedPaletteId(palette.id);
+                        setOverrides((prev) => ({ ...prev, colorPalette: true }));
+                      }}
                       className={`p-2.5 rounded-xl text-left transition-colors flex flex-col justify-between gap-2 ${
                         isSelected
                           ? 'bg-white shadow-xs ring-1 ring-zinc-950/10'
@@ -482,7 +556,6 @@ export const CompilerStudio = () => {
                   </p>
                 </div>
 
-                {/* Sample interactive button in this palette */}
                 <div className="flex items-center gap-2 shrink-0">
                   <span
                     className="px-2.5 py-1 rounded-md text-xs font-medium select-none shadow-xs"
@@ -499,9 +572,14 @@ export const CompilerStudio = () => {
 
             {/* 4. Libraries (Searchable Multi-Select) */}
             <div className="space-y-2">
-              <span className="text-xs font-medium text-zinc-500 block">
-                Libraries & Dependencies
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-500">
+                  Libraries & Dependencies
+                </span>
+                {!overrides.libraries && (
+                  <span className="text-[10px] text-zinc-400">Default: Tailwind CSS, JWT</span>
+                )}
+              </div>
 
               {/* Search Box */}
               <div className="relative">
@@ -537,7 +615,7 @@ export const CompilerStudio = () => {
                 </div>
               )}
 
-              {/* Suggestion Chips */}
+              {/* Suggestions */}
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {CURATED_LIBRARIES.filter((lib) =>
                   lib.toLowerCase().includes(libSearch.toLowerCase())

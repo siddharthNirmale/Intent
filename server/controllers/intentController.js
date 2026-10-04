@@ -158,6 +158,15 @@ ${projectRules.map((r) => `- ${r}`).join('\n')}
   };
 };
 
+// Predefined System Defaults for Initial Build Advanced Settings
+const DEFAULTS = {
+  techStack: 'MERN Stack (React, Express, MongoDB)',
+  platform: 'claude-code',
+  temperature: '0.2 (Precise)',
+  colorPalette: 'Minimal White-First',
+  libraries: ['Tailwind CSS', 'JWT'],
+};
+
 /**
  * @desc    Compile developer prompt into structured agent instructions
  * @route   POST /api/intent/compile
@@ -165,7 +174,7 @@ ${projectRules.map((r) => `- ${r}`).join('\n')}
  */
 export const compileIntent = async (req, res) => {
   try {
-    const { rawPrompt, targetAgent, mode = 'build', rules = [], config } = req.body;
+    const { rawPrompt, targetAgent, mode = 'build', rules = [], config = {} } = req.body;
 
     if (!rawPrompt || rawPrompt.trim().length === 0) {
       return res.status(400).json({
@@ -174,29 +183,55 @@ export const compileIntent = async (req, res) => {
       });
     }
 
-    // Naturally determine project type from tech stack
-    let inferredBuildType = config?.buildType;
-    if (!inferredBuildType && config?.techStack) {
-      const stackLower = config.techStack.toLowerCase();
-      if (stackLower.includes('frontend') || stackLower.includes('react + vite') || stackLower.includes('vue') || stackLower.includes('svelte') || stackLower.includes('astro')) {
-        inferredBuildType = 'Frontend';
-      } else if (stackLower.includes('backend') || stackLower.includes('api') || stackLower.includes('fastapi') || stackLower.includes('nestjs') || stackLower.includes('fiber') || stackLower.includes('hono')) {
-        inferredBuildType = 'Backend';
-      } else {
-        inferredBuildType = 'Full Stack';
+    let effectiveRules = [...(Array.isArray(rules) ? rules : [])];
+
+    if (mode === 'build') {
+      // Use user's customized setting if provided; otherwise seamlessly use system defaults
+      const effectiveTechStack = config.techStack || DEFAULTS.techStack;
+      const effectiveTemperature = config.temperature || DEFAULTS.temperature;
+      const effectivePalette = config.colorPalette || DEFAULTS.colorPalette;
+      const effectiveLibraries =
+        Array.isArray(config.libraries) && config.libraries.length > 0
+          ? config.libraries
+          : DEFAULTS.libraries;
+
+      // Naturally determine project type from the effective tech stack
+      let inferredBuildType = config.buildType;
+      if (!inferredBuildType) {
+        const stackLower = effectiveTechStack.toLowerCase();
+        if (
+          stackLower.includes('frontend') ||
+          stackLower.includes('react + vite') ||
+          stackLower.includes('vue') ||
+          stackLower.includes('svelte') ||
+          stackLower.includes('astro')
+        ) {
+          inferredBuildType = 'Frontend';
+        } else if (
+          stackLower.includes('backend') ||
+          stackLower.includes('api') ||
+          stackLower.includes('fastapi') ||
+          stackLower.includes('nestjs') ||
+          stackLower.includes('fiber') ||
+          stackLower.includes('hono')
+        ) {
+          inferredBuildType = 'Backend';
+        } else {
+          inferredBuildType = 'Full Stack';
+        }
       }
+
+      effectiveRules.push(
+        `Project Scope: ${inferredBuildType}`,
+        `Tech Stack: ${effectiveTechStack}`,
+        `Temperature: ${effectiveTemperature}`,
+        `Design Palette: ${effectivePalette}`,
+        ...(effectiveLibraries.length > 0 ? [`Libraries: ${effectiveLibraries.join(', ')}`] : [])
+      );
     }
 
-    const effectiveRules = [
-      ...(Array.isArray(rules) ? rules : []),
-      ...(inferredBuildType ? [`Project Scope: ${inferredBuildType}`] : []),
-      ...(config?.techStack ? [`Tech Stack: ${config.techStack}`] : []),
-      ...(config?.temperature ? [`Temperature: ${config.temperature}`] : []),
-      ...(config?.colorPalette ? [`Design Palette: ${config.colorPalette}`] : []),
-      ...(config?.libraries?.length ? [`Libraries: ${config.libraries.join(', ')}`] : []),
-    ];
-
-    const compilation = compileDeveloperIntent(rawPrompt, targetAgent, mode, effectiveRules);
+    const effectiveAgent = targetAgent || config.platform || DEFAULTS.platform;
+    const compilation = compileDeveloperIntent(rawPrompt, effectiveAgent, mode, effectiveRules);
 
     let savedTask = null;
     if (getDbStatus()) {
