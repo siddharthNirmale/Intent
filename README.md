@@ -1,6 +1,7 @@
 # Intent Studio — AI Intent Compiler
 
 [![Live Demo](https://img.shields.io/badge/Demo-intent--tau.vercel.app-black?style=flat&logo=vercel)](https://intent-tau.vercel.app)
+[![Portfolio](https://img.shields.io/badge/Portfolio-siddharthn--portfolio.vercel.app-black?style=flat&logo=vercel)](https://siddharthn-portfolio.vercel.app/)
 [![Stack](https://img.shields.io/badge/Stack-MERN%20%2B%20Vite%20%2B%20Tailwind-emerald?style=flat)](https://github.com)
 [![Inference](https://img.shields.io/badge/Inference-Groq%20Cloud-orange?style=flat)](https://groq.com)
 [![Security](https://img.shields.io/badge/Encryption-AES--256--GCM-zinc?style=flat)](https://nodejs.org/api/crypto.html)
@@ -275,6 +276,14 @@ cd Intent
 - [ ] **CLI Tool (`intent-cli`)**: Direct terminal pipe `intent "add stripe webhooks" | cursor --agent`.
 - [ ] **Repository Context Ingestion**: Automatic parsing of `README.md` and `package.json` to auto-populate framework constraints.
 - [ ] **Multi-Agent Comparative Compilation**: Side-by-side prompt generation for comparing agent-specific directives simultaneously.
+
+---
+
+## Author
+
+Developed by **Siddharth Nirmale**  
+* Portfolio: [https://siddharthn-portfolio.vercel.app/](https://siddharthn-portfolio.vercel.app/)
+* GitHub: [@siddharthNirmale](https://github.com/siddharthNirmale)
 
 ---
 

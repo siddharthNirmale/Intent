@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRouter } from '../context/RouterContext';
 import Button from './ui/Button';
 import AccountSettingsModal from './AccountSettingsModal';
+import { ArrowUpRight } from 'lucide-react';
 
 export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -166,6 +167,18 @@ export const Navbar = ({ onOpenAuth, onSelectAccount, onSelectSettings }) => {
                       >
                         Settings
                       </button>
+                      <div className="h-px bg-zinc-100 my-1" />
+                      <a
+                        href="https://siddharthn-portfolio.vercel.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setDropdownOpen(false)}
+                        className="w-full px-2.5 py-1.5 text-xs text-left text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 rounded-lg transition-colors cursor-pointer select-none outline-none flex items-center justify-between group"
+                        title="Creator Portfolio"
+                      >
+                        <span>Portfolio</span>
+                        <ArrowUpRight className="w-3 h-3 text-zinc-400 group-hover:text-zinc-950 transition-colors" />
+                      </a>
                     </div>
                   </div>
                 </div>

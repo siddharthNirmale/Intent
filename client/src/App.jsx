@@ -6,6 +6,7 @@ import AuthModal from './components/AuthModal';
 import AccountSettingsModal from './components/AccountSettingsModal';
 import CompilerStudio from './components/IntentCompiler/CompilerStudio';
 import SettingsPage from './pages/SettingsPage';
+import Footer from './components/Footer';
 
 export const AppContent = () => {
   const { pathname, navigate } = useRouter();
@@ -44,6 +45,8 @@ export const AppContent = () => {
           <CompilerStudio onOpenAuth={handleOpenAuth} />
         )}
       </main>
+
+      <Footer />
 
       <AuthModal
         isOpen={authModalOpen}
