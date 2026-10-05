@@ -9,6 +9,10 @@
 
 > A specialized developer workbench that translates ambiguous human instructions, raw specifications, and terminal errors into structured, high-precision execution prompts for autonomous AI coding agents (Antigravity, Cursor, Claude Code, and Codex).
 
+<p align="center">
+  <img src="docs/screenshots/workbench-compiled-output.png" alt="Intent Studio — AI Intent Compiler Workbench" width="100%" />
+</p>
+
 ---
 
 ## Overview
@@ -22,6 +26,38 @@ When developers pass informal, high-level thoughts directly to an autonomous age
 * **Get Caught in Circular Loops**: Drift into repetitive edits when resolving ambiguous terminal errors.
 
 **Intent Studio** solves this steering problem. It acts as an **Intent Compilation Layer** between the developer and the autonomous coding agent, transforming raw human intent into verified, constraint-bound execution tasks.
+
+---
+
+## Interface & Key Screens
+
+### 1. Initial Build Workbench
+*Translates ambiguous feature prompts into structured execution directives with intelligent tech stack detection, design palettes, and curated library guardrails.*
+
+<p align="center">
+  <img src="docs/screenshots/workbench-initial-build.png" alt="Initial Build Workbench" width="100%" />
+</p>
+
+### 2. High-Precision Compiled Output
+*Outputs pure, zero-fluff execution contracts tailored to the target coding agent (Antigravity, Cursor, Claude Code) with one-click copy.*
+
+<p align="center">
+  <img src="docs/screenshots/workbench-compiled-output.png" alt="Compiled Execution Output" width="100%" />
+</p>
+
+### 3. Command Fix Mode (Surgical Error Patching)
+*Scopes terminal errors and stack traces to exact architectural boundaries, applying surgical patch strategies and strict safety guardrails.*
+
+<p align="center">
+  <img src="docs/screenshots/workbench-command-fix.png" alt="Command Fix Mode" width="100%" />
+</p>
+
+### 4. BYOK Security & API Key Management
+*Bring-Your-Own-Key infrastructure featuring military-grade AES-256-GCM authenticated encryption at rest and live verification.*
+
+<p align="center">
+  <img src="docs/screenshots/settings-byok-security.png" alt="Settings & BYOK Security" width="100%" />
+</p>
 
 ---
 
