@@ -457,7 +457,7 @@ export const CompilerStudio = ({ onOpenAuth }) => {
       } else if (err.status === 429) {
         setCompileError(err.message || 'Rate limit reached. Please wait a moment before sending more requests.');
       } else {
-        setCompileError(err.message || 'Compilation failed. Please try again.');
+        setCompileError(err.message || 'Unable to compile intent. Please try again later.');
       }
     } finally {
       setLoading(false);

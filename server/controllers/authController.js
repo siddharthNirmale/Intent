@@ -1,8 +1,10 @@
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
-import { getDbStatus } from '../config/db.js';
+import { getDbStatus, getDbErrorMessage } from '../config/db.js';
 import { encryptApiKey } from '../services/cryptoService.js';
 import { validateGroqKey } from '../services/ai/groqService.js';
+
+
 
 /**
  * @desc    Register a new user
@@ -14,7 +16,7 @@ export const registerUser = async (req, res) => {
     if (!getDbStatus()) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently offline. Please ensure MongoDB is running or configure MONGO_URI in server/.env',
+        message: getDbErrorMessage(),
       });
     }
 
@@ -81,10 +83,16 @@ export const registerUser = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error('[Register Error]:', error.message);
+    console.error('[Register Error]:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'An account with this email already exists.',
+      });
+    }
     return res.status(500).json({
       success: false,
-      message: 'Server error during registration. Please try again.',
+      message: 'Unable to create account right now. Please try again later.',
     });
   }
 };
@@ -99,7 +107,7 @@ export const loginUser = async (req, res) => {
     if (!getDbStatus()) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently offline. Please ensure MongoDB is running or configure MONGO_URI in server/.env',
+        message: getDbErrorMessage(),
       });
     }
 
@@ -164,10 +172,10 @@ export const loginUser = async (req, res) => {
       token,
     });
   } catch (error) {
-    console.error('[Login Error]:', error.message);
+    console.error('[Login Error]:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error during login. Please try again.',
+      message: 'Unable to sign in right now. Please try again later.',
     });
   }
 };
@@ -207,10 +215,10 @@ export const getMe = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[GetMe Error]:', error.message);
+    console.error('[GetMe Error]:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error retrieving user profile',
+      message: 'Unable to load profile. Please try again later.',
     });
   }
 };
@@ -225,7 +233,7 @@ export const updateProfile = async (req, res) => {
     if (!getDbStatus()) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently offline.',
+        message: getDbErrorMessage(),
       });
     }
 
@@ -261,10 +269,10 @@ export const updateProfile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[Update Profile Error]:', error.message);
+    console.error('[Update Profile Error]:', error);
     return res.status(500).json({
       success: false,
-      message: error.message || 'Server error updating profile',
+      message: 'Unable to update profile right now. Please try again later.',
     });
   }
 };
@@ -279,7 +287,7 @@ export const getApiKey = async (req, res) => {
     if (!getDbStatus()) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently offline.',
+        message: getDbErrorMessage(),
       });
     }
 
@@ -316,10 +324,10 @@ export const getApiKey = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[Get API Key Error]:', error.message);
+    console.error('[Get API Key Error]:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error retrieving API key status',
+      message: 'Unable to retrieve API key settings. Please try again later.',
     });
   }
 };
@@ -334,7 +342,7 @@ export const updateApiKey = async (req, res) => {
     if (!getDbStatus()) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently offline.',
+        message: getDbErrorMessage(),
       });
     }
 
@@ -425,10 +433,10 @@ export const updateApiKey = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[Update API Key Error]:', error.message);
+    console.error('[Update API Key Error]:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error saving API key',
+      message: 'Unable to save API key right now. Please try again later.',
     });
   }
 };
@@ -443,7 +451,7 @@ export const clearApiKey = async (req, res) => {
     if (!getDbStatus()) {
       return res.status(503).json({
         success: false,
-        message: 'Database is currently offline.',
+        message: getDbErrorMessage(),
       });
     }
 
@@ -486,10 +494,10 @@ export const clearApiKey = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[Clear API Key Error]:', error.message);
+    console.error('[Clear API Key Error]:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error removing API key',
+      message: 'Unable to remove API key right now. Please try again later.',
     });
   }
 };

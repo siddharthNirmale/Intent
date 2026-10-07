@@ -137,7 +137,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
       setAccountMessage({ text: 'Saved', type: 'success' });
       setTimeout(() => setAccountMessage({ text: '', type: '' }), 2500);
     } catch (err) {
-      setAccountMessage({ text: err.message || 'Failed to save', type: 'error' });
+      setAccountMessage({ text: err.message || 'Unable to update profile. Please try again later.', type: 'error' });
     } finally {
       setAccountLoading(false);
     }
@@ -167,7 +167,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
       }
       setTimeout(() => setKeyMessage({ text: '', type: '' }), 4000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Verification failed. Please check your key.', type: 'error' });
+      setKeyMessage({ text: err.message || 'Unable to verify API key. Please try again later.', type: 'error' });
     } finally {
       setKeyLoading(false);
     }
@@ -186,7 +186,7 @@ export const SettingsPage = ({ onOpenAuth }) => {
       if (typeof refreshUsage === 'function') refreshUsage();
       setTimeout(() => setKeyMessage({ text: '', type: '' }), 3000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Failed to remove key', type: 'error' });
+      setKeyMessage({ text: err.message || 'Unable to remove API key. Please try again later.', type: 'error' });
     } finally {
       setKeyLoading(false);
     }

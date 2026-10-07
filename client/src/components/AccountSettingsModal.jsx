@@ -113,7 +113,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
         setAccountMessage({ text: '', type: '' });
       }, 3000);
     } catch (err) {
-      setAccountMessage({ text: err.message || 'Failed to update account', type: 'error' });
+      setAccountMessage({ text: err.message || 'Unable to update account. Please try again later.', type: 'error' });
     } finally {
       setAccountLoading(false);
     }
@@ -176,7 +176,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
         setKeyMessage({ text: '', type: '' });
       }, 4000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Failed to verify key. Please check your key.', type: 'error' });
+      setKeyMessage({ text: err.message || 'Unable to verify API key. Please try again later.', type: 'error' });
     } finally {
       setKeyLoading(false);
     }
@@ -198,7 +198,7 @@ export const AccountSettingsModal = ({ isOpen, onClose, initialTab = 'account' }
         setKeyMessage({ text: '', type: '' });
       }, 3000);
     } catch (err) {
-      setKeyMessage({ text: err.message || 'Failed to remove key', type: 'error' });
+      setKeyMessage({ text: err.message || 'Unable to remove API key. Please try again later.', type: 'error' });
     } finally {
       setKeyLoading(false);
     }

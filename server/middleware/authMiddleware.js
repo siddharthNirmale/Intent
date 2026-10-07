@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import { getDbStatus } from '../config/db.js';
+import { getDbStatus, getDbErrorMessage } from '../config/db.js';
 
 export const protect = async (req, res, next) => {
   let token;
@@ -15,7 +15,7 @@ export const protect = async (req, res, next) => {
       if (!token) {
         return res.status(401).json({
           success: false,
-          message: 'Not authorized, no token provided',
+          message: 'Please sign in to continue.',
         });
       }
 
@@ -25,7 +25,7 @@ export const protect = async (req, res, next) => {
       if (!getDbStatus()) {
         return res.status(503).json({
           success: false,
-          message: 'Database is currently unreachable. Please check MongoDB connection.',
+          message: getDbErrorMessage(),
         });
       }
 
@@ -36,7 +36,7 @@ export const protect = async (req, res, next) => {
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Account not found. Please register or sign in.',
+          message: 'Account not found. Please sign in again.',
         });
       }
 
@@ -46,13 +46,13 @@ export const protect = async (req, res, next) => {
       console.error('[Auth Middleware Error]:', error.message);
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired session. Please sign in again.',
+        message: 'Your session has expired. Please sign in again.',
       });
     }
   } else {
     return res.status(401).json({
       success: false,
-      message: 'Authentication required. Please sign in to continue.',
+      message: 'Please sign in to continue.',
     });
   }
 };

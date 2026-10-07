@@ -82,7 +82,7 @@ export const AuthProvider = ({ children }) => {
         return response.user;
       }
     } catch (err) {
-      const msg = err.message || 'Login failed. Please check credentials.';
+      const msg = err.message || 'Unable to sign in. Please try again later.';
       setError(msg);
       throw new Error(msg);
     }
@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }) => {
         return response.user;
       }
     } catch (err) {
-      const msg = err.message || 'Registration failed. Please check details.';
+      const msg = err.message || 'Unable to create account. Please try again later.';
       setError(msg);
       throw new Error(msg);
     }
@@ -139,7 +139,7 @@ export const AuthProvider = ({ children }) => {
       setUser(updatedUser);
       return updatedUser;
     } catch (err) {
-      const msg = err.message || 'Failed to update profile.';
+      const msg = err.message || 'Unable to update profile. Please try again later.';
       setError(msg);
       throw new Error(msg);
     }

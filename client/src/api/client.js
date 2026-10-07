@@ -70,7 +70,7 @@ async function request(endpoint, options = {}) {
   } catch (error) {
     if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
       const friendlyError = new Error(
-        'Unable to reach server. Please check your network connection or verify that the backend is online.'
+        'Unable to reach server. Please try again later.'
       );
       friendlyError.originalError = error;
       console.error(`[API Network Error] ${options.method || 'GET'} ${endpoint}:`, error);

@@ -1,14 +1,13 @@
 import mongoose from 'mongoose';
 
-const DEFAULT_MONGO_URI =
-  'mongodb+srv://siddharth175nirmale1_db_user:4CidTsRkFJxfwV0x@wcc.dqy7jlw.mongodb.net/intent_compiler?retryWrites=true&w=majority';
-
 // Global cache for serverless environments (preserves connection across warm lambda invocations)
 let cached = global.mongoose;
 
 if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
+
+let lastDbError = null;
 
 /**
  * Returns true if Mongoose has an active, ready connection to MongoDB
@@ -18,11 +17,19 @@ export const getDbStatus = () => {
 };
 
 /**
+ * Returns a user-friendly error message when database service is unreachable
+ */
+export const getDbErrorMessage = () => {
+  return 'Service is temporarily unavailable. Please try again later.';
+};
+
+/**
  * Connect to MongoDB with serverless caching and automatic retry support
  */
 const connectDB = async () => {
   // If already connected, return cached connection immediately
   if (mongoose.connection.readyState === 1) {
+    lastDbError = null;
     return mongoose.connection;
   }
 
@@ -36,7 +43,16 @@ const connectDB = async () => {
     }
   }
 
-  const mongoUri = (process.env.MONGO_URI || DEFAULT_MONGO_URI).trim();
+  const mongoUri = (process.env.MONGO_URI || '').trim();
+
+  if (!mongoUri) {
+    const error = new Error('Database connection is not configured. Please try again later.');
+    lastDbError = error;
+    cached.promise = null;
+    cached.conn = null;
+    console.warn('[MongoDB] MONGO_URI environment variable is not defined.');
+    throw error;
+  }
 
   const opts = {
     bufferCommands: false,
@@ -47,26 +63,43 @@ const connectDB = async () => {
   cached.promise = mongoose
     .connect(mongoUri, opts)
     .then((m) => {
+      lastDbError = null;
       console.log(`[MongoDB] Connected: ${m.connection.host}`);
       return m.connection;
     })
     .catch((err) => {
       cached.promise = null;
+      lastDbError = err;
       console.error(`[MongoDB] Connection Failed: ${err.message}`);
       throw err;
     });
 
   try {
     cached.conn = await cached.promise;
+    lastDbError = null;
     return cached.conn;
   } catch (error) {
     cached.promise = null;
+    lastDbError = error;
     console.warn(
-      '[MongoDB] Server running with database offline. Please configure MONGO_URI or check network access.'
+      `[MongoDB] Server running with database offline: ${error.message}`
     );
     throw error;
   }
 };
 
-export default connectDB;
+// Monitor connection events
+mongoose.connection.on('connected', () => {
+  lastDbError = null;
+});
 
+mongoose.connection.on('error', (err) => {
+  lastDbError = err;
+  console.error(`[MongoDB Runtime Error]: ${err.message}`);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('[MongoDB Runtime Warning]: Disconnected');
+});
+
+export default connectDB;

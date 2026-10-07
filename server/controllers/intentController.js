@@ -281,7 +281,7 @@ export const compileIntent = async (req, res) => {
         if (hasPersonalKey) {
           return res.status(400).json({
             success: false,
-            message: `Your personal Groq API key was rejected: ${groqError.message}. Please check or replace your key in Settings.`,
+            message: 'Your personal Groq API key could not be verified. Please check or update your key in Settings.',
           });
         }
       }
@@ -330,10 +330,10 @@ export const compileIntent = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[Compile Intent Error]:', error.message);
+    console.error('[Compile Intent Error]:', error);
     return res.status(500).json({
       success: false,
-      message: 'Failed to compile intent. Please try again.',
+      message: 'Unable to compile intent right now. Please try again later.',
     });
   }
 };
@@ -373,10 +373,10 @@ export const getIntentTasks = async (req, res) => {
       data: tasks,
     });
   } catch (error) {
-    console.error('[GetIntentTasks Error]:', error.message);
+    console.error('[GetIntentTasks Error]:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error retrieving compiled tasks',
+      message: 'Unable to load task history. Please try again later.',
     });
   }
 };
